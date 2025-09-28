@@ -1,0 +1,6 @@
+base_url: "http://www.coop.se"
+timeouts:
+  navigation_ms: 30000
+  action_ms: 30000
+
+

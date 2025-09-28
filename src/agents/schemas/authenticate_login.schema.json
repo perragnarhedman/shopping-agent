@@ -1,0 +1,50 @@
+{
+  "type": "object",
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": [
+        "logged_in",
+        "already",
+        "sca_required",
+        "failed"
+      ]
+    },
+    "displayName": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "provider": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "bankid",
+        "sms",
+        "email",
+        null
+      ]
+    },
+    "evidenceUrl": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uri"
+    },
+    "error": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "status",
+    "evidenceUrl"
+  ],
+  "additionalProperties": false
+}

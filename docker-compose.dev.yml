@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  shopping-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: shopping-agent-dev
+    environment:
+      - OPENAI_API_KEY=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
+      - COOP_USERNAME=${COOP_USERNAME}
+      - COOP_PASSWORD=${COOP_PASSWORD}
+      - ENVIRONMENT=development
+      - LOG_LEVEL=DEBUG
+      - DEFAULT_STORE=coop_se
+    volumes:
+      - ./src:/app/src
+      - ./configs:/app/configs
+      - ./logs:/app/logs
+      - ./data:/app/data
+      - ./tests:/app/tests
+    ports:
+      - "8000:8000"
+      - "5678:5678"
+    networks:
+      - shopping-network
+    depends_on:
+      - redis
+    restart: unless-stopped
+    command: ["python", "-m", "debugpy", "--listen", "0.0.0.0:5678", "main.py"]
+
+  redis:
+    image: redis:7-alpine
+    container_name: shopping-agent-redis-dev
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_dev_data:/data
+    networks:
+      - shopping-network
+    restart: unless-stopped
+
+volumes:
+  redis_dev_data:
+
+networks:
+  shopping-network:
+    driver: bridge
+
+

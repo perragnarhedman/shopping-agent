@@ -1,0 +1,37 @@
+{
+  "type": "object",
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": [
+        "set",
+        "unchanged",
+        "failed"
+      ]
+    },
+    "display": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "evidenceUrl": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uri"
+    },
+    "error": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "status",
+    "evidenceUrl"
+  ],
+  "additionalProperties": false
+}

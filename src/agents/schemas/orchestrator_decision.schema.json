@@ -1,0 +1,150 @@
+{
+  "type": "object",
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": [
+        "continue",
+        "done",
+        "blocked"
+      ]
+    },
+    "plan": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "step": {
+            "type": "string"
+          },
+          "task": {
+            "type": "string",
+            "enum": [
+              "accept_cookies",
+              "ensure_postcode",
+              "ensure_login",
+              "search_products",
+              "add_to_cart",
+              "read_cart_summary",
+              "list_delivery_slots",
+              "select_delivery_slot",
+              "pre_payment_checkout"
+            ]
+          },
+          "params": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "step",
+          "task",
+          "params"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "nextAction": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "properties": {
+        "task": {
+          "type": "string",
+          "enum": [
+            "accept_cookies",
+            "ensure_postcode",
+            "ensure_login",
+            "search_products",
+            "add_to_cart",
+            "read_cart_summary",
+            "list_delivery_slots",
+            "select_delivery_slot",
+            "pre_payment_checkout"
+          ]
+        },
+        "params": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "task",
+        "params"
+      ],
+      "additionalProperties": false
+    },
+    "memory": {
+      "type": "object",
+      "properties": {
+        "postcode": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "loggedIn": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "qty": {
+                "type": "number",
+                "minimum": 1
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "pending",
+                  "added",
+                  "oos",
+                  "failed"
+                ]
+              },
+              "pdpUrl": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uri"
+              }
+            },
+            "required": [
+              "name",
+              "qty",
+              "status"
+            ],
+            "additionalProperties": false
+          }
+        }
+      }
+    },
+    "userPrompt": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "notes": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "status",
+    "plan",
+    "nextAction",
+    "memory"
+  ],
+  "additionalProperties": false
+}

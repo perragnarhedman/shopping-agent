@@ -1,0 +1,75 @@
+{
+  "type": "object",
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": [
+        "ready",
+        "failed"
+      ]
+    },
+    "paymentMethodsVisible": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "selectedPayment": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "summary": {
+      "type": "object",
+      "properties": {
+        "itemsSEK": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "deliverySEK": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "totalSEK": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        }
+      },
+      "required": [
+        "itemsSEK",
+        "deliverySEK",
+        "totalSEK"
+      ],
+      "additionalProperties": false
+    },
+    "evidenceUrl": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uri"
+    },
+    "warning": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "status",
+    "summary",
+    "evidenceUrl"
+  ],
+  "additionalProperties": false
+}

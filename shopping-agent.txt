@@ -1,0 +1,141 @@
+Project: Shopping Agent (Groceries MVP)
+
+1) Vision
+- Build an LLM-assisted shopping assistant that converts free-text instructions (recipes, shopping lists) into completed online grocery orders.
+- End-to-end automation of: login, product finding, cart management, checkout (payment + shipping). Human input only when legally or practically required (identity, address, payment confirmation).
+- Architecture should keep “coded” logic minimal and treat most actions as agent tasks to be re-used across stores in the future (store-agnostic where possible).
+- Assume no official store APIs; rely on robust web automation.
+
+2) Chosen Infrastructure
+- Language: Python 3.11+
+- LLM Provider: OpenAI (JSON-typed responses validated via Pydantic)
+- Web Automation: Playwright (Chromium)
+- Runtime/API: FastAPI + Uvicorn (for health and optional local control endpoints)
+- Validation: Pydantic (Python equivalent to zod)
+- Config: YAML files (global + per-store)
+- Containerization: Docker (local-first)
+- Optional Memory Cache (future): Redis
+- Logging: Standard logging + structured format; console + rotating file handler
+
+3) Technical Requirements (MVP)
+- Console-first operation; minimal API only for health and potential control hooks
+- Single store target: coop.se (Sweden)
+- Typed LLM I/O (JSON), schema-validated
+- Robust web automation with configurable retries/backoff
+- Local deployment with Docker Compose
+- Agents:
+  - Main Orchestrator (plans and coordinates tasks)
+  - Authentication Agent (login/session)
+  - Shopping Agent (search → add-to-cart → checkout)
+  - Memory Agent (store/retrieve interaction context; pluggable)
+
+4) Project Structure (simplified)
+shopping-agent/
+├── src/
+│   ├── agents/
+│   │   ├── main_orchestrator.py
+│   │   ├── authentication.py
+│   │   ├── shopping.py
+│   │   └── memory.py
+│   ├── core/
+│   │   ├── llm_client.py          # OpenAI wrapper, JSON mode helpers
+│   │   ├── web_automation.py      # Playwright helpers, selectors utils
+│   │   ├── schema_validator.py    # Pydantic models + validation helpers
+│   │   └── memory_store.py        # Local/Redis-backed memory abstraction
+│   ├── stores/
+│   │   └── coop_se/
+│   │       ├── config.yaml        # Store base URL, timeouts, agent cfg
+│   │       ├── selectors.yaml     # CSS/XPath selectors for flows
+│   │       └── store_interface.py # Store-specific helpers if needed
+│   └── utils/
+│       ├── retry_handler.py
+│       ├── logger.py              # logging setup wrapper
+│       └── config_loader.py
+├── tests/
+│   ├── test_agents/
+│   ├── test_core/
+│   └── test_integration/
+├── configs/
+│   └── global_config.yaml         # Global defaults; env overrides allowed
+├── main.py                        # FastAPI app exposing /health
+├── requirements.txt
+├── docker-compose.yml
+├── docker-compose.dev.yml
+├── Dockerfile
+├── Dockerfile.dev
+├── .env.example
+└── README.md
+
+5) Step-by-Step Implementation Guide
+
+Phase 0: Local Docker Infra
+- Prepare files: Dockerfile, docker-compose.yml, requirements.txt, .env.example
+- Minimal FastAPI app with /health in main.py
+- Script or Make targets to build and run containers locally
+- Verify: curl http://localhost:8000/health → {"status":"healthy"}
+
+Phase 1: Core Foundations
+- utils/config_loader.py: load YAML + env overrides
+- core/logger.py: console + rotating file logging
+- core/schema_validator.py: base typed models and JSON validation helpers
+- core/llm_client.py: OpenAI wrapper that enforces JSON schemas via Pydantic
+- core/web_automation.py: Playwright launcher, context/page helpers, safe waits, retry utilities
+
+Phase 2: Agents (Simplified Architecture)
+- Main Orchestrator
+  - plan_shopping_tasks(request) → ordered steps (authenticate → search → cart → checkout)
+  - coordinate sub-agents; collect results; handle top-level retries
+- Authentication Agent
+  - login_user(credentials), check_session_valid(), refresh_session()
+  - use selectors from stores/coop_se and web_automation helpers
+- Shopping Agent
+  - search_products(query) → structured Product[] (name, id, price)
+  - add_to_cart(product_id, quantity)
+  - proceed_to_checkout() → shipment + payment selection
+  - complete_purchase() → order summary
+- Memory Agent
+  - store_context(request, result), retrieve_relevant_context(query)
+  - abstraction over local/Redis memory_store
+
+Phase 3: Store-Specific Layer (coop.se)
+- configs/stores assets: base_url, timeouts
+- selectors.yaml: robust CSS/XPath selectors for login, search, product card, add-to-cart, cart, checkout
+- store_interface.py: small, store-specific helpers if needed (e.g., consent banners)
+
+Phase 4: Testing Strategy
+- Unit tests: agents decision logic, schema validation, retry handler
+- Integration tests: orchestrator ↔ agents; web_automation flows with Playwright in headless mode
+- LLM tests: mock OpenAI responses, validate JSON against Pydantic models
+- E2E smoke: full flow with feature flags and mocks for payment where needed
+
+Phase 5: Hardening & DX
+- Robust retries/backoff per agent and per action
+- Logging + redact sensitive fields
+- Optional Redis for memory persistence
+- Better prompts with few-shot examples; safeguard fallback prompts
+- Observability hooks (timings, success rates)
+
+6) Key Config Knobs
+- Global (configs/global_config.yaml):
+  - agents: model, temperature, max_tokens
+  - automation: timeouts, retries, backoff
+  - memory: local vs redis, caps
+- Store (stores/coop_se/config.yaml + selectors.yaml):
+  - base_url, per-page selectors, product list/card fields, checkout steps
+
+7) Commands (local)
+- Build: docker compose build
+- Run: docker compose up -d
+- Logs: docker compose logs -f shopping-agent
+- Health: curl http://localhost:8000/health
+
+8) MVP Success Checklist
+- Login succeeds with provided credentials
+- Relevant product search results returned
+- Items added to cart with correct quantities
+- Checkout completes with selected shipping and payment
+- Order confirmation captured
+
+Notes
+- Keep agent prompts/tool definitions minimal but precise; validate all LLM outputs with Pydantic models and regenerate on validation errors.
+- Prefer Playwright’s built-in waiting and isolation; make selectors resilient and conf-driven.

@@ -1,0 +1,429 @@
+{
+  "accept_cookies.schema.json": {
+    "type": "object",
+    "properties": {
+      "accepted": {
+        "type": "boolean"
+      },
+      "evidenceUrl": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "format": "uri"
+      }
+    },
+    "required": [
+      "accepted",
+      "evidenceUrl"
+    ],
+    "additionalProperties": false
+  },
+  "ensure_postcode.schema.json": {
+    "type": "object",
+    "properties": {
+      "status": {
+        "type": "string",
+        "enum": [
+          "set",
+          "unchanged",
+          "failed"
+        ]
+      },
+      "display": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "evidenceUrl": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "format": "uri"
+      },
+      "error": {
+        "type": [
+          "string",
+          "null"
+        ]
+      }
+    },
+    "required": [
+      "status",
+      "evidenceUrl"
+    ],
+    "additionalProperties": false
+  },
+  "search_results.schema.json": {
+    "type": "object",
+    "properties": {
+      "query": {
+        "type": "string"
+      },
+      "results": {
+        "type": "array",
+        "maxItems": 5,
+        "items": {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string"
+            },
+            "price": {
+              "type": "number",
+              "minimum": 0
+            },
+            "unitSize": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "url": {
+              "type": "string",
+              "format": "uri"
+            },
+            "availability": {
+              "type": "string",
+              "enum": [
+                "in_stock",
+                "oos",
+                "unknown"
+              ]
+            }
+          },
+          "required": [
+            "title",
+            "price",
+            "url",
+            "availability"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    "required": [
+      "query",
+      "results"
+    ],
+    "additionalProperties": false
+  },
+  "add_to_cart.schema.json": {
+    "type": "object",
+    "properties": {
+      "status": {
+        "type": "string",
+        "enum": [
+          "added",
+          "oos",
+          "failed"
+        ]
+      },
+      "title": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "quantity": {
+        "type": [
+          "number",
+          "null"
+        ],
+        "minimum": 1
+      },
+      "cartSubtotalSEK": {
+        "type": [
+          "number",
+          "null"
+        ],
+        "minimum": 0
+      },
+      "evidenceUrl": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "format": "uri"
+      },
+      "error": {
+        "type": [
+          "string",
+          "null"
+        ]
+      }
+    },
+    "required": [
+      "status",
+      "evidenceUrl"
+    ],
+    "additionalProperties": false
+  },
+  "cart_summary.schema.json": {
+    "type": "object",
+    "properties": {
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string"
+            },
+            "qty": {
+              "type": "number",
+              "minimum": 1
+            },
+            "lineSEK": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "title",
+            "qty",
+            "lineSEK"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "subtotalSEK": {
+        "type": [
+          "number",
+          "null"
+        ],
+        "minimum": 0
+      },
+      "fees": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "label": {
+              "type": "string"
+            },
+            "amountSEK": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "label",
+            "amountSEK"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "evidenceUrl": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "format": "uri"
+      }
+    },
+    "required": [
+      "items",
+      "evidenceUrl"
+    ],
+    "additionalProperties": false
+  },
+  "delivery_slots.schema.json": {
+    "type": "object",
+    "properties": {
+      "mode": {
+        "type": "string",
+        "enum": [
+          "home"
+        ]
+      },
+      "slots": {
+        "type": "array",
+        "maxItems": 20,
+        "items": {
+          "type": "object",
+          "properties": {
+            "label": {
+              "type": "string"
+            },
+            "isoStart": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time"
+            },
+            "isoEnd": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time"
+            },
+            "feeSEK": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0
+            }
+          },
+          "required": [
+            "label"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "evidenceUrl": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "format": "uri"
+      }
+    },
+    "required": [
+      "mode",
+      "slots",
+      "evidenceUrl"
+    ],
+    "additionalProperties": false
+  },
+  "select_slot.schema.json": {
+    "type": "object",
+    "properties": {
+      "status": {
+        "type": "string",
+        "enum": [
+          "selected",
+          "not_found",
+          "failed"
+        ]
+      },
+      "chosen": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "isoStart": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "isoEnd": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "label"
+        ],
+        "additionalProperties": false
+      },
+      "evidenceUrl": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "format": "uri"
+      },
+      "error": {
+        "type": [
+          "string",
+          "null"
+        ]
+      }
+    },
+    "required": [
+      "status",
+      "evidenceUrl"
+    ],
+    "additionalProperties": false
+  },
+  "pre_payment_checkout.schema.json": {
+    "type": "object",
+    "properties": {
+      "status": {
+        "type": "string",
+        "enum": [
+          "ready",
+          "failed"
+        ]
+      },
+      "paymentMethodsVisible": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "selectedPayment": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "summary": {
+        "type": "object",
+        "properties": {
+          "itemsSEK": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "deliverySEK": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "totalSEK": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0
+          }
+        },
+        "required": [
+          "itemsSEK",
+          "deliverySEK",
+          "totalSEK"
+        ],
+        "additionalProperties": false
+      },
+      "evidenceUrl": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "format": "uri"
+      },
+      "warning": {
+        "type": [
+          "string",
+          "null"
+        ]
+      }
+    },
+    "required": [
+      "status",
+      "summary",
+      "evidenceUrl"
+    ],
+    "additionalProperties": false
+  }
+}

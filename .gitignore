@@ -1,0 +1,32 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+
+# Node/Playwright (if used)
+node_modules/
+playwright-report/
+test-results/
+
+# Env & secrets
+.env
+.env.*
+
+# Logs & artifacts
+logs/
+!logs/.gitkeep
+
+# Docker
+*.local
+.docker/
+
+# IDE
+.idea/
+.vscode/
+

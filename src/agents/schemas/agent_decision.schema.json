@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "rationale": { "type": "string" },
+    "actions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "args": { "type": "object", "additionalProperties": true }
+        },
+        "required": ["name"],
+        "additionalProperties": false
+      }
+    },
+    "terminate": { "type": "boolean" }
+  },
+  "required": ["rationale", "actions", "terminate"],
+  "additionalProperties": false
+}
+

@@ -1,0 +1,30 @@
+system:
+  name: "Shopping Agent"
+  version: "0.1.0"
+  environment: "development"
+
+logging:
+  level: "INFO"
+
+
+agents:
+  model: "gpt-4.1"
+  temperature: 0.0
+  max_steps_per_agent: 5
+  max_agents: 3
+  max_total_steps: 12
+  timeouts:
+    per_step_seconds: 15
+  max_actions_per_step: 8
+
+human_in_loop:
+  enabled: true
+
+stores:
+  coop_se:
+    login_signals:
+      - "text=Logga ut"
+      - "[data-testid='account-avatar']"
+      - "text=Mina sidor"
+
+

@@ -1,0 +1,54 @@
+{
+  "type": "object",
+  "properties": {
+    "query": {
+      "type": "string"
+    },
+    "results": {
+      "type": "array",
+      "maxItems": 5,
+      "items": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "price": {
+            "type": "number",
+            "minimum": 0
+          },
+          "unitSize": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "availability": {
+            "type": "string",
+            "enum": [
+              "in_stock",
+              "oos",
+              "unknown"
+            ]
+          }
+        },
+        "required": [
+          "title",
+          "price",
+          "url",
+          "availability"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "query",
+    "results"
+  ],
+  "additionalProperties": false
+}

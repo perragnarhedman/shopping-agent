@@ -1,0 +1,34 @@
+Goal: Ensure the user is authenticated on coop.se. If already logged in, do nothing.
+
+Params (provided securely by the runtime, NEVER echo or log secrets):
+- loginId: "{{loginId}}"         // e.g., email or phone; safe to use in selectors
+- passwordSecretRef: "{{secretRef}}" // secret handle; you receive the password via secure tool/context
+
+Plan:
+0) Clear overlays:
+   - Call accept_cookies and proceed regardless of whether a click was needed. This ensures the cookie overlay does not intercept clicks.
+1) Detect logged-in state:
+   - Look for account indicator in header/menu: texts like "Mina sidor", "Mitt konto", "Logga ut", user avatar/name.
+   - If found → return status "already".
+2) Initiate login:
+   - Click "Logga in" (role=button/link, accessible name ~ /Logga in/i) using semantic tools (e.g., click_text or click_role).
+   - Wait for login form/modal.
+   - Default path: click "Med e‑post" (or visible text ~ /Med e-post|E-post/). Do NOT choose BankID unless explicitly requested or email path fails.
+3) Fill credentials (DO NOT echo password in any output or logs):
+   - Username: use hint selector for the email/username field (e.g., key "login.username_input") and type {{loginId}}.
+   - Password: use type_hint_secret on key "login.password_input" with secret name {{secretRef}} so the secret is never exposed in logs.
+   - Submit: click the login/submit button (e.g., key "login.submit_button") or press Enter.
+4) Handle outcomes:
+   - Success: account indicator visible; set status "logged_in".
+   - If email flow is unavailable or fails with a clear prompt requiring BankID:
+     - Click the button "Med BankID" to open the BankID flow.
+     - Wait until the BankID page/prompt is visible (e.g., text contains "BankID" or a QR prompt such as "Skanna QR-kod" / "Öppna BankID-appen"). Use timeout_ms.
+     - Take a screenshot with tag "bankid_qr" to logs/bankid_qr.png.
+     - Call finalize with { status:"sca_required", provider:"bankid", screenshot:"logs/bankid_qr.png" } and stop.
+   - Failure: visible error message; set status "failed"; include terse error (no secrets).
+5) Screenshot (mask any sensitive fields; avoid exposing password).
+
+Timing:
+- Use timeout_ms (milliseconds) for any timeouts (e.g., wait_text, click_text, click_role, fill_label). Do NOT use "timeout".
+
+Return the **Authenticate/Login** schema.

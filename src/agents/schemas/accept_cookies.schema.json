@@ -1,0 +1,20 @@
+{
+  "type": "object",
+  "properties": {
+    "accepted": {
+      "type": "boolean"
+    },
+    "evidenceUrl": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uri"
+    }
+  },
+  "required": [
+    "accepted",
+    "evidenceUrl"
+  ],
+  "additionalProperties": false
+}
