@@ -18,6 +18,7 @@ from src.agents.authentication import AuthenticationAgent
 from src.agents.shopping import ShoppingAgent
 from src.agents.tools import ToolEnv
 from src.core.web_automation import launch_browser, new_context, new_page, safe_goto
+from src.core.temporal_client import get_temporal_client
 
 
 load_dotenv()
@@ -179,6 +180,45 @@ async def run_shopping(req: RunRequest) -> JSONResponse:
                     return JSONResponse(result)
                 except Exception as exc:
                     return JSONResponse({"error": str(exc)}, status_code=500)
+
+
+class V2RunRequest(RunRequest):
+    workflow_id: str | None = None
+    task_queue: str = "shopping-agent-task-queue"
+
+
+@app.post("/v2/run/authentication")
+async def v2_run_authentication(req: V2RunRequest) -> JSONResponse:
+    try:
+        client = await get_temporal_client()
+        payload = req.model_dump()
+        payload.update({"kind": "authentication"})
+        handle = await client.start_workflow(
+            "authentication_v1",
+            payload,
+            id=req.workflow_id or None,
+            task_queue=req.task_queue,
+        )
+        return JSONResponse({"workflow_id": handle.id})
+    except Exception as exc:
+        return JSONResponse({"error": str(exc)}, status_code=500)
+
+
+@app.post("/v2/run/shopping")
+async def v2_run_shopping(req: V2RunRequest) -> JSONResponse:
+    try:
+        client = await get_temporal_client()
+        payload = req.model_dump()
+        payload.update({"kind": "shopping"})
+        handle = await client.start_workflow(
+            "shopping_v1",
+            payload,
+            id=req.workflow_id or None,
+            task_queue=req.task_queue,
+        )
+        return JSONResponse({"workflow_id": handle.id})
+    except Exception as exc:
+        return JSONResponse({"error": str(exc)}, status_code=500)
 
 
 def run() -> None:

@@ -1,3 +1,15 @@
+run:
+	docker compose up --build
+
+run-dev:
+	ENVIRONMENT=development docker compose -f docker-compose.dev.yml up --build
+
+temporal-up:
+	docker compose up -d temporal temporal-ui
+
+worker:
+	docker compose up --build temporal-worker
+
 .PHONY: help build up down dev logs clean status
 
 help:

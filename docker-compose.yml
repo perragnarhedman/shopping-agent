@@ -24,6 +24,7 @@ services:
       - shopping-network
     depends_on:
       - redis
+      - temporal
     restart: unless-stopped
 
   redis:
@@ -35,6 +36,56 @@ services:
       - redis_data:/data
     networks:
       - shopping-network
+    restart: unless-stopped
+
+  temporal:
+    image: temporalio/auto-setup:1.25.0
+    container_name: temporal
+    environment:
+      - DB=sqlite
+      - TEMPORAL_NAMESPACE=default
+    ports:
+      - "7233:7233"
+    networks:
+      - shopping-network
+    restart: unless-stopped
+
+  temporal-ui:
+    image: temporalio/ui:2.31.2
+    container_name: temporal-ui
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+    ports:
+      - "8080:8080"
+    networks:
+      - shopping-network
+    depends_on:
+      - temporal
+    restart: unless-stopped
+
+  temporal-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: temporal-worker
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - COOP_USERNAME=${COOP_USERNAME}
+      - COOP_PASSWORD=${COOP_PASSWORD}
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - DEFAULT_STORE=${DEFAULT_STORE:-coop_se}
+      - TEMPORAL_ADDRESS=temporal:7233
+    command: ["python", "-m", "src.workflows.worker"]
+    volumes:
+      - ./src:/app/src
+      - ./configs:/app/configs
+      - ./logs:/app/logs
+      - ./data:/app/data
+    networks:
+      - shopping-network
+    depends_on:
+      - temporal
     restart: unless-stopped
 
 volumes:
