@@ -1,0 +1,24 @@
+# Do not send secrets or heavy local dirs into Docker build context
+.env
+.env.*
+
+# Git
+.git
+.gitignore
+
+# Python caches
+__pycache__/
+*.py[cod]
+*.pyo
+
+# IDE/OS
+.DS_Store
+.idea/
+.vscode/
+
+# Project data and logs
+logs/
+data/
+
+# Other
+node_modules/
