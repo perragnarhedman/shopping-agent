@@ -97,12 +97,14 @@ services:
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - DEFAULT_STORE=${DEFAULT_STORE:-coop_se}
       - TEMPORAL_ADDRESS=temporal:7233
-    command: ["python", "-m", "src.workflows.worker"]
+    command: ["bash", "-lc", "chmod +x src/workflows/worker_entry.sh && ./src/workflows/worker_entry.sh"]
     volumes:
       - ./src:/app/src
       - ./configs:/app/configs
       - ./logs:/app/logs
       - ./data:/app/data
+    ports:
+      - "6080:6080"  # noVNC viewer
     networks:
       - shopping-network
     depends_on:

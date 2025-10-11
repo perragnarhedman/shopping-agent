@@ -193,6 +193,32 @@ async def ui_live() -> HTMLResponse:
     return HTMLResponse(html)
 
 
+@app.get("/ui/desktop")
+async def ui_desktop() -> HTMLResponse:
+    html = (
+        """
+        <html>
+          <head>
+            <meta charset=\"utf-8\" />
+            <title>Agent Desktop Viewer</title>
+            <style>
+              body { margin:0; height:100vh; display:flex; flex-direction:column; }
+              header { padding:10px 12px; border-bottom:1px solid #eee; font-family: -apple-system, system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
+              iframe { flex:1; width:100%; border:0; }
+            </style>
+          </head>
+          <body>
+            <header>
+              <strong>Desktop Viewer</strong> – mirrors the worker's Chromium via noVNC
+            </header>
+            <iframe src=\"http://localhost:6080/vnc.html\"></iframe>
+          </body>
+        </html>
+        """
+    )
+    return HTMLResponse(html)
+
+
 @app.get("/ui/login/email")
 async def ui_login_email(run_id: str) -> HTMLResponse:
     html = f"""
