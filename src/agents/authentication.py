@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
-from src.agents.runtime import AgentRunner
+from src.agents.agent_sdk_runner import AgentSDKRunner
 from src.agents.tools import ToolEnv, TOOL_IMPLS
 
 
 class AuthenticationAgent:
     def __init__(self, *, store: str) -> None:
-        self._runner = AgentRunner(store=store)
+        self._runner = AgentSDKRunner()
         self._store = store
 
     async def run(self, *, goal: str, env: ToolEnv, debug: bool = False) -> Dict[str, Any]:

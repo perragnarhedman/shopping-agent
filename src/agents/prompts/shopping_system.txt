@@ -24,16 +24,9 @@ Success (termination conditions)
 - Cart is opened (cart page or panel visible).
 - Then terminate.
 
-Output format (MANDATORY)
-- Return a strict JSON object matching AgentDecision:
-  {
-    "rationale": "why these actions now",
-    "actions": [
-      { "name": "<tool_name>", "args": { ... } }
-    ],
-    "terminate": false|true
-  }
-- Do not return any text outside of JSON. Do not invent tools.
+Output policy
+- Use registered tools to act; do not output prose unless no tools are needed.
+- Do not invent tools. Do not set terminate=true; call the "finalize" tool when done.
 
 High-level plan
 1) Ensure on homepage or search results; if needed stay on current page.

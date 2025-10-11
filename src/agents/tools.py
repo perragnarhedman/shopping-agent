@@ -586,7 +586,8 @@ async def t_get_config(env: ToolEnv, *, key: str) -> Dict[str, Any]:
     try:
         cfg = ConfigLoader.load_global_config()
         val = _get_from_dict(cfg, key)
-        return {"ok": True, "value": val}
+        # Also surface under data so the runtime forwards it back to the model
+        return {"ok": True, "value": val, "data": {"value": val}}
     except Exception as exc:
         return {"ok": False, "error": str(exc)}
 

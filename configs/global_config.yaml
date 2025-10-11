@@ -12,9 +12,9 @@ agents:
   temperature: 0.0
   max_steps_per_agent: 5
   max_agents: 3
-  max_total_steps: 12
+  max_total_steps: 16
   timeouts:
-    per_step_seconds: 15
+    per_step_seconds: 30
   max_actions_per_step: 8
 
 human_in_loop:
@@ -26,5 +26,8 @@ stores:
       - "text=Logga ut"
       - "[data-testid='account-avatar']"
       - "text=Mina sidor"
+
+    # Default postcode used to resolve store/postcode modals
+    default_postcode: "14139"
 
 

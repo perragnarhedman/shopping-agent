@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 import asyncio
+import uuid
 import logging
 from fastapi import FastAPI
+from fastapi import WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi import HTTPException
@@ -13,12 +15,11 @@ import yaml
 from src.core.logger import setup_logging
 from src.utils.config_loader import ConfigLoader
 from src.agents.human_io import human_broker
-from src.agents.main_orchestrator import Orchestrator
-from src.agents.authentication import AuthenticationAgent
-from src.agents.shopping import ShoppingAgent
 from src.agents.tools import ToolEnv
-from src.core.web_automation import launch_browser, new_context, new_page, safe_goto
 from src.core.temporal_client import get_temporal_client
+from src.core.events import subscribe_events
+from src.workflows.auth_workflow import AuthenticationWorkflow
+from src.workflows.shopping_workflow import ShoppingWorkflow
 
 
 load_dotenv()
@@ -60,44 +61,10 @@ class RunRequest(BaseModel):
     login_method: str | None = None
 
 
-@app.post("/run")
-async def run_orchestrator(req: RunRequest) -> JSONResponse:
-    orchestrator = Orchestrator(store=req.store)
-    async with launch_browser(headless=req.headless) as browser:
-        async with new_context(browser) as ctx:
-            async with new_page(ctx) as page:
-                with open(f"src/stores/{req.store}/config.yaml", "r") as f:
-                    cfg = yaml.safe_load(f)
-                await safe_goto(page, cfg["base_url"])
-                env = ToolEnv(page=page, store=req.store)
-                try:
-                    result = await orchestrator.run(goal=req.goal, env=env, debug=req.debug)
-                    return JSONResponse(result)
-                except Exception as exc:
-                    return JSONResponse({"error": str(exc)}, status_code=500)
+# removed legacy /run endpoint (v1)
 
 
-@app.post("/run/authentication")
-async def run_authentication(req: RunRequest) -> JSONResponse:
-    agent = AuthenticationAgent(store=req.store)
-    async with launch_browser(headless=req.headless) as browser:
-        async with new_context(browser) as ctx:
-            async with new_page(ctx) as page:
-                with open(f"src/stores/{req.store}/config.yaml", "r") as f:
-                    cfg = yaml.safe_load(f)
-                await safe_goto(page, cfg["base_url"])
-                env = ToolEnv(page=page, store=req.store)
-                try:
-                    # Default to email if not provided
-                    method = req.login_method or "email"
-                    goal = "Log in to coop.se and confirm logged-in state."
-                    goal += f" Login method: {method}."
-                    result = await agent.run(goal=goal, env=env, debug=req.debug)
-                    return JSONResponse(result)
-                except Exception as exc:
-                    import traceback
-                    logging.getLogger(__name__).exception("/run/authentication failed: %s", exc)
-                    return JSONResponse({"error": str(exc), "traceback": traceback.format_exc()}, status_code=500)
+# removed legacy /run/authentication endpoint (v1)
 
 
 @app.get("/ui/qr")
@@ -146,6 +113,86 @@ async def ui_qr_auto(run_id: str | None = None) -> HTMLResponse:
     return HTMLResponse(html)
 
 
+@app.websocket("/ws/agent-events")
+async def ws_agent_events(ws: WebSocket) -> None:
+    await ws.accept()
+    try:
+        async for evt in subscribe_events():
+            await ws.send_json(evt)
+    except WebSocketDisconnect:
+        return
+    except Exception:
+        try:
+            await ws.close()
+        except Exception:
+            pass
+
+
+@app.get("/ui/live")
+async def ui_live() -> HTMLResponse:
+    html = (
+        """
+        <html>
+          <head>
+            <meta charset=\"utf-8\" />
+            <title>Agent Live Viewer</title>
+            <style>
+              body { font-family: -apple-system, system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif; margin: 0; }
+              .bar { display:flex; align-items:center; gap:12px; padding:10px 14px; border-bottom:1px solid #eee; }
+              .btn { background:#0b5fff; color:#fff; border:none; padding:8px 12px; border-radius:6px; cursor:pointer; }
+              .btn.secondary { background:#eee; color:#333; }
+              .wrap { display:flex; height: calc(100vh - 52px); }
+              .pane { flex:1; overflow:auto; }
+              .logs { padding:12px; }
+              .event { border-bottom:1px solid #f0f0f0; padding:8px 0; font-size:14px; }
+              .event .meta { color:#666; font-size:12px; margin-bottom:4px; }
+              .event pre { background:#fafafa; padding:8px; border-radius:6px; overflow:auto; }
+            </style>
+          </head>
+          <body>
+            <div class=\"bar\">
+              <button class=\"btn\" onclick=\"window.open('https://www.coop.se/', '_blank')\">Open coop.se</button>
+              <button class=\"btn secondary\" onclick=\"clearLogs()\">Clear</button>
+              <span id=\"status\" style=\"margin-left:auto;color:#666;\">Disconnected</span>
+            </div>
+            <div class=\"wrap\">
+              <div class=\"pane logs\" id=\"logPane\"></div>
+            </div>
+            <script>
+              const logPane = document.getElementById('logPane');
+              const statusEl = document.getElementById('status');
+              function addEvent(evt) {
+                const div = document.createElement('div');
+                div.className = 'event';
+                const meta = document.createElement('div');
+                meta.className = 'meta';
+                meta.textContent = `[${new Date().toLocaleTimeString()}] ${evt.type || 'event'}`;
+                const pre = document.createElement('pre');
+                pre.textContent = JSON.stringify(evt, null, 2);
+                div.appendChild(meta);
+                div.appendChild(pre);
+                logPane.prepend(div);
+              }
+              function clearLogs(){ logPane.innerHTML=''; }
+              function connect() {
+                const proto = (location.protocol === 'https:') ? 'wss' : 'ws';
+                const ws = new WebSocket(`${proto}://${location.host}/ws/agent-events`);
+                ws.onopen = () => { statusEl.textContent = 'Connected'; statusEl.style.color = '#0a0'; };
+                ws.onclose = () => { statusEl.textContent = 'Disconnected'; statusEl.style.color = '#a00'; setTimeout(connect, 1500); };
+                ws.onerror = () => { statusEl.textContent = 'Error'; statusEl.style.color = '#a00'; };
+                ws.onmessage = (e) => {
+                  try { addEvent(JSON.parse(e.data)); } catch { /* ignore */ }
+                };
+              }
+              connect();
+            </script>
+          </body>
+        </html>
+        """
+    )
+    return HTMLResponse(html)
+
+
 @app.get("/ui/login/email")
 async def ui_login_email(run_id: str) -> HTMLResponse:
     html = f"""
@@ -165,24 +212,14 @@ async def ui_login_email(run_id: str) -> HTMLResponse:
     return HTMLResponse(html)
 
 
-@app.post("/run/shopping")
-async def run_shopping(req: RunRequest) -> JSONResponse:
-    agent = ShoppingAgent(store=req.store)
-    async with launch_browser(headless=req.headless) as browser:
-        async with new_context(browser) as ctx:
-            async with new_page(ctx) as page:
-                with open(f"src/stores/{req.store}/config.yaml", "r") as f:
-                    cfg = yaml.safe_load(f)
-                await safe_goto(page, cfg["base_url"])
-                env = ToolEnv(page=page, store=req.store)
-                try:
-                    result = await agent.run(goal="Find 'mjölk', add 1 unit to cart, then open the cart.", env=env, debug=req.debug)
-                    return JSONResponse(result)
-                except Exception as exc:
-                    return JSONResponse({"error": str(exc)}, status_code=500)
+# removed legacy /run/shopping endpoint (v1)
 
 
-class V2RunRequest(RunRequest):
+class V2RunRequest(BaseModel):
+    store: str = "coop_se"
+    headless: bool = True
+    debug: bool = False
+    login_method: str | None = None
     workflow_id: str | None = None
     task_queue: str = "shopping-agent-task-queue"
 
@@ -192,11 +229,11 @@ async def v2_run_authentication(req: V2RunRequest) -> JSONResponse:
     try:
         client = await get_temporal_client()
         payload = req.model_dump()
-        payload.update({"kind": "authentication"})
+        workflow_id = req.workflow_id or f"auth-{uuid.uuid4()}"
         handle = await client.start_workflow(
-            "authentication_v1",
+            AuthenticationWorkflow.run,
             payload,
-            id=req.workflow_id or None,
+            id=workflow_id,
             task_queue=req.task_queue,
         )
         return JSONResponse({"workflow_id": handle.id})
@@ -209,11 +246,11 @@ async def v2_run_shopping(req: V2RunRequest) -> JSONResponse:
     try:
         client = await get_temporal_client()
         payload = req.model_dump()
-        payload.update({"kind": "shopping"})
+        workflow_id = req.workflow_id or f"shop-{uuid.uuid4()}"
         handle = await client.start_workflow(
-            "shopping_v1",
+            ShoppingWorkflow.run,
             payload,
-            id=req.workflow_id or None,
+            id=workflow_id,
             task_queue=req.task_queue,
         )
         return JSONResponse({"workflow_id": handle.id})

@@ -13,6 +13,7 @@ services:
       - ENVIRONMENT=${ENVIRONMENT:-development}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - DEFAULT_STORE=${DEFAULT_STORE:-coop_se}
+      - TEMPORAL_ADDRESS=temporal:7233
     volumes:
       - ./src:/app/src
       - ./configs:/app/configs
@@ -42,12 +43,19 @@ services:
     image: temporalio/auto-setup:1.25.0
     container_name: temporal
     environment:
-      - DB=sqlite
+      - DB=postgres12
+      - DB_PORT=5432
+      - POSTGRES_USER=temporal
+      - POSTGRES_PWD=temporal
+      - POSTGRES_SEEDS=temporal-postgres
+      - POSTGRES_DB=temporal
       - TEMPORAL_NAMESPACE=default
     ports:
       - "7233:7233"
     networks:
       - shopping-network
+    depends_on:
+      - temporal-postgres
     restart: unless-stopped
 
   temporal-ui:
@@ -61,6 +69,19 @@ services:
       - shopping-network
     depends_on:
       - temporal
+    restart: unless-stopped
+
+  temporal-postgres:
+    image: postgres:15-alpine
+    container_name: temporal-postgres
+    environment:
+      - POSTGRES_PASSWORD=temporal
+      - POSTGRES_USER=temporal
+      - POSTGRES_DB=temporal
+    networks:
+      - shopping-network
+    volumes:
+      - temporal_pgdata:/var/lib/postgresql/data
     restart: unless-stopped
 
   temporal-worker:
@@ -90,6 +111,7 @@ services:
 
 volumes:
   redis_data:
+  temporal_pgdata:
 
 networks:
   shopping-network:

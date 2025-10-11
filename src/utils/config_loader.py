@@ -21,6 +21,14 @@ class ConfigLoader:
             cfg['system']['environment'] = os.getenv('ENVIRONMENT', cfg['system'].get('environment', 'development'))
         if 'logging' in cfg:
             cfg['logging']['level'] = os.getenv('LOG_LEVEL', cfg['logging'].get('level', 'INFO'))
+        # store-specific env overrides
+        # COOP_DEFAULT_POSTCODE overrides stores.coop_se.default_postcode if provided
+        coop_postcode = os.getenv('COOP_DEFAULT_POSTCODE')
+        try:
+            if coop_postcode:
+                cfg.setdefault('stores', {}).setdefault('coop_se', {})['default_postcode'] = coop_postcode
+        except Exception:
+            pass
         return cfg
 
 
