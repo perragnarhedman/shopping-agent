@@ -118,7 +118,11 @@ class AgentSDKRunner:
                         args = dict(args)
                         args["value"] = str(last_config_value)
 
-                result = await execute_tool(name, args, page_env)
+                # Execute tool safely; always produce a tool message
+                try:
+                    result = await execute_tool(name, args, page_env)
+                except Exception as exc:
+                    result = {"ok": False, "error": str(exc)}
                 # Publish step event for live viewer
                 try:
                     await publish_event({

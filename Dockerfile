@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y \
     x11vnc \
     novnc \
     websockify \
+    xauth \
     && rm -rf /var/lib/apt/lists/*
 
 # Playwright and browser

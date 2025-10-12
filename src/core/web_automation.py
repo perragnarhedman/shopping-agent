@@ -60,7 +60,12 @@ async def type_selector(page: Page, selector: str, text: str, *, timeout_ms: int
 
 async def screenshot_on_failure(page: Page, path: str) -> None:
     try:
-        await page.screenshot(path=path, full_page=True)
+        # Append timestamp suffix to avoid overwriting
+        import os, datetime
+        base, ext = os.path.splitext(path)
+        ts = datetime.datetime.now().strftime("-%Y%m%d-%H%M%S")
+        final = f"{base}{ts}{ext}"
+        await page.screenshot(path=final, full_page=True)
     except Exception:
         pass
 

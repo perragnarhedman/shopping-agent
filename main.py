@@ -211,7 +211,142 @@ async def ui_desktop() -> HTMLResponse:
             <header>
               <strong>Desktop Viewer</strong> – mirrors the worker's Chromium via noVNC
             </header>
-            <iframe src=\"http://localhost:6080/vnc.html\"></iframe>
+            <iframe src="http://localhost:6080/vnc_auto.html?autoconnect=true"></iframe>
+          </body>
+        </html>
+        """
+    )
+    return HTMLResponse(html)
+
+
+
+
+@app.get("/ui/start")
+async def ui_start() -> HTMLResponse:
+    html = (
+        """
+        <html>
+          <head>
+            <meta charset=\"utf-8\" />
+            <title>Start Shopping Run</title>
+            <link rel=\"preconnect\" href=\"https://fonts.googleapis.com\"/>
+            <link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin/>
+            <link href=\"https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap\" rel=\"stylesheet\"/>
+            <style>
+              :root { --bg:#0b0c10; --card:#111318; --muted:#8f9baa; --text:#e6e9ef; --accent:#22c55e; }
+              *{ box-sizing:border-box }
+              body { margin:0; background:#0b0c10; color:var(--text); font-family: Inter, -apple-system, system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
+              .wrap { display:grid; grid-template-columns: 360px 1fr; height:100vh; }
+              .side { padding:20px; border-right:1px solid #1b1e24; background:linear-gradient(180deg, #0e1015 0%, #0b0c10 100%); }
+              .card { background:var(--card); border:1px solid #1b1e24; border-radius:12px; padding:16px; box-shadow: 0 10px 30px rgba(0,0,0,0.25); }
+              .title { font-size:18px; font-weight:600; margin:0 0 12px; }
+              textarea { width:100%; height:160px; resize:vertical; background:#0d0f14; color:var(--text); border:1px solid #20232a; border-radius:10px; padding:10px 12px; font-family: inherit; }
+              .row { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:12px 0; }
+              .toggle { display:flex; align-items:center; gap:10px; color:var(--muted); }
+              .btn { background:var(--accent); border:none; color:#0a0f0a; font-weight:600; padding:10px 14px; border-radius:10px; cursor:pointer; }
+              .btn:disabled { opacity:0.6; cursor:not-allowed; }
+              .main { display:flex; flex-direction:column; }
+              header { display:flex; align-items:center; justify-content:space-between; padding:14px 18px; border-bottom:1px solid #1b1e24; }
+              .status { font-size:13px; color:var(--muted); }
+              .panes { display:grid; grid-template-rows: auto 1fr; gap:10px; padding:12px; }
+              .messages { background:var(--card); border:1px solid #1b1e24; border-radius:10px; padding:12px; max-height:220px; overflow:auto; }
+              iframe { width:100%; height:100%; border:0; background:#000; border-radius:10px; }
+              .timeline { background:var(--card); border:1px solid #1b1e24; border-radius:10px; padding:12px; overflow:auto; }
+              .event { border-bottom:1px solid #1b1e24; padding:8px 0; font-size:14px; }
+              .event .meta { color:var(--muted); font-size:12px; margin-bottom:4px; }
+              .muted { color:var(--muted); }
+              a.link { color:#8ab4ff; text-decoration:none; }
+            </style>
+          </head>
+          <body>
+            <div class=\"wrap\">
+              <aside class=\"side\">
+                <div class=\"card\">
+                  <h3 class=\"title\">Start a Shopping Run</h3>
+                  <label class=\"muted\">Shopping list (one item per line or comma-separated)</label>
+                  <textarea id=\"shopping_list\" placeholder=\"e.g. mjölk, bröd\"></textarea>
+                  <div class=\"row\">
+                    <label class=\"toggle\"><input id=\"headless\" type=\"checkbox\"/> Headless</label>
+                    <button id=\"startBtn\" class=\"btn\">Start</button>
+                  </div>
+                  <div class=\"muted\" id=\"runInfo\">No run started</div>
+                  <div style=\"margin-top:10px\"><a class=\"link\" href=\"/ui/desktop\" target=\"_blank\">Open Desktop Viewer</a> · <a class=\"link\" href=\"/ui/live\" target=\"_blank\">Open Live Events</a></div>
+                </div>
+              </aside>
+              <main class=\"main\">
+                <header>
+                  <div><strong>Shopping Agent</strong> <span class=\"status\" id=\"status\">Idle</span></div>
+                </header>
+                <div class=\"panes\">
+                  <div class=\"messages\" id=\"messages\"></div>
+                  <iframe id=\"viewer\" src=\"/ui/desktop\" style=\"height:60vh\"></iframe>
+                  <div class=\"timeline\" id=\"timeline\"></div>
+                </div>
+              </main>
+            </div>
+            <script>
+              const startBtn = document.getElementById('startBtn');
+              const headless = document.getElementById('headless');
+              const shoppingList = document.getElementById('shopping_list');
+              const runInfo = document.getElementById('runInfo');
+              const timeline = document.getElementById('timeline');
+              const statusEl = document.getElementById('status');
+              const msgPane = document.getElementById('messages');
+              let runId = null;
+
+              function addEvent(evt){
+                const div = document.createElement('div');
+                div.className = 'event';
+                const meta = document.createElement('div');
+                meta.className = 'meta';
+                meta.textContent = '[' + new Date().toLocaleTimeString() + '] ' + (evt.type || 'event');
+                const pre = document.createElement('pre');
+                pre.textContent = JSON.stringify(evt, null, 2);
+                div.appendChild(meta); div.appendChild(pre);
+                timeline.prepend(div);
+              }
+
+              function connectEvents(){
+                const proto = (location.protocol === 'https:') ? 'wss' : 'ws';
+                const ws = new WebSocket(proto + '://' + location.host + '/ws/agent-events');
+                ws.onmessage = (e)=>{ try { const evt = JSON.parse(e.data); addEvent(evt); statusEl.textContent = 'Running';
+                  if (evt.type === 'tool_result' || evt.type === 'auto_observe') {
+                    const div = document.createElement('div');
+                    div.style.borderBottom = '1px solid #1b1e24';
+                    div.style.padding = '6px 0';
+                    div.textContent = JSON.stringify(evt, null, 2);
+                    msgPane.prepend(div);
+                    // keep only last ~8 messages
+                    while (msgPane.childElementCount > 8) msgPane.removeChild(msgPane.lastChild);
+                  }
+                } catch {} };
+                ws.onclose = ()=>{ statusEl.textContent = 'Idle'; };
+              }
+
+              startBtn.onclick = async ()=>{
+                startBtn.disabled = true;
+                try {
+                  const payload = {
+                    store: 'coop_se',
+                    headless: !!headless.checked,
+                    debug: true,
+                    task_queue: 'shopping-agent-task-queue',
+                    shopping_list: shoppingList.value
+                  };
+                  const res = await fetch('/v2/run/shopping', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                  const json = await res.json();
+                  if (json.workflow_id){
+                    runId = json.workflow_id;
+                    runInfo.textContent = 'Run: ' + runId;
+                    statusEl.textContent = 'Running';
+                    connectEvents();
+                    try { window.open('/ui/desktop', '_blank'); } catch(e) {}
+                    try { window.open('/ui/live', '_blank'); } catch(e) {}
+                  }
+                } catch (e) { console.error(e); }
+                finally { startBtn.disabled = false; }
+              };
+            </script>
           </body>
         </html>
         """
@@ -248,6 +383,7 @@ class V2RunRequest(BaseModel):
     login_method: str | None = None
     workflow_id: str | None = None
     task_queue: str = "shopping-agent-task-queue"
+    shopping_list: str | None = None
 
 
 @app.post("/v2/run/authentication")
@@ -280,6 +416,43 @@ async def v2_run_shopping(req: V2RunRequest) -> JSONResponse:
             task_queue=req.task_queue,
         )
         return JSONResponse({"workflow_id": handle.id})
+    except Exception as exc:
+        return JSONResponse({"error": str(exc)}, status_code=500)
+
+
+class SignalRequest(BaseModel):
+    workflow_id: str
+
+
+@app.post("/v2/signal/pause")
+async def signal_pause(req: SignalRequest) -> JSONResponse:
+    try:
+        client = await get_temporal_client()
+        handle = client.get_workflow_handle(req.workflow_id)
+        await handle.signal(ShoppingWorkflow.pause)
+        return JSONResponse({"ok": True})
+    except Exception as exc:
+        return JSONResponse({"error": str(exc)}, status_code=500)
+
+
+@app.post("/v2/signal/resume")
+async def signal_resume(req: SignalRequest) -> JSONResponse:
+    try:
+        client = await get_temporal_client()
+        handle = client.get_workflow_handle(req.workflow_id)
+        await handle.signal(ShoppingWorkflow.resume)
+        return JSONResponse({"ok": True})
+    except Exception as exc:
+        return JSONResponse({"error": str(exc)}, status_code=500)
+
+
+@app.post("/v2/signal/cancel")
+async def signal_cancel(req: SignalRequest) -> JSONResponse:
+    try:
+        client = await get_temporal_client()
+        handle = client.get_workflow_handle(req.workflow_id)
+        await handle.signal(ShoppingWorkflow.cancel)
+        return JSONResponse({"ok": True})
     except Exception as exc:
         return JSONResponse({"error": str(exc)}, status_code=500)
 

@@ -82,7 +82,9 @@ async def t_press(env: ToolEnv, *, selector: str, key: str) -> Dict[str, Any]:
 
 
 async def t_screenshot(env: ToolEnv, *, tag: str = "shot", path: str | None = None) -> Dict[str, Any]:
-    file_path = path or f"logs/{tag}.png"
+    import datetime
+    ts = datetime.datetime.now().strftime("-%Y%m%d-%H%M%S")
+    file_path = path or f"logs/{tag}{ts}.png"
     # Ensure directory exists
     try:
         os.makedirs(os.path.dirname(file_path), exist_ok=True)

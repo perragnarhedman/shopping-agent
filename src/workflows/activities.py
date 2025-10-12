@@ -40,7 +40,12 @@ async def run_shopping_activity(payload: Dict[str, Any]) -> Dict[str, Any]:
             async with new_page(ctx) as page:
                 await safe_goto(page, _base_url_for_store(store))
                 env = ToolEnv(page=page, store=store)
-                result = await agent.run(goal="Find 'mjölk', add 1 unit to cart, then open the cart.", env=env, debug=debug)
+                shopping_list = (payload.get("shopping_list") or "").strip()
+                if shopping_list:
+                    goal = f"Shop the following items: {shopping_list}. Add exactly 1 unit of each, then open the cart."
+                else:
+                    goal = "Find 'mjölk', add 1 unit to cart, then open the cart."
+                result = await agent.run(goal=goal, env=env, debug=debug)
                 return result
 
 
