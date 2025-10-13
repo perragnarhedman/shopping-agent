@@ -228,124 +228,198 @@ async def ui_start() -> HTMLResponse:
         <html>
           <head>
             <meta charset=\"utf-8\" />
-            <title>Start Shopping Run</title>
+            <title>Shopping Agent</title>
             <link rel=\"preconnect\" href=\"https://fonts.googleapis.com\"/>
             <link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin/>
             <link href=\"https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap\" rel=\"stylesheet\"/>
             <style>
-              :root { --bg:#0b0c10; --card:#111318; --muted:#8f9baa; --text:#e6e9ef; --accent:#22c55e; }
+              /* ChatGPT-like dark theme */
+              :root {
+                --bg:#0e0f13;           /* page background */
+                --panel:#0f1117;        /* chat bubble (assistant) */
+                --panel-2:#0b0d12;      /* side panel background */
+                --border:#262a34;       /* subtle borders */
+                --muted:#9aa4b2;        /* secondary text */
+                --text:#e7ebf0;         /* primary text */
+                --accent:#10b981;       /* emerald */
+                --user:#1a2330;         /* user bubble */
+              }
               *{ box-sizing:border-box }
-              body { margin:0; background:#0b0c10; color:var(--text); font-family: Inter, -apple-system, system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
-              .wrap { display:grid; grid-template-columns: 360px 1fr; height:100vh; }
-              .side { padding:20px; border-right:1px solid #1b1e24; background:linear-gradient(180deg, #0e1015 0%, #0b0c10 100%); }
-              .card { background:var(--card); border:1px solid #1b1e24; border-radius:12px; padding:16px; box-shadow: 0 10px 30px rgba(0,0,0,0.25); }
-              .title { font-size:18px; font-weight:600; margin:0 0 12px; }
-              textarea { width:100%; height:160px; resize:vertical; background:#0d0f14; color:var(--text); border:1px solid #20232a; border-radius:10px; padding:10px 12px; font-family: inherit; }
-              .row { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:12px 0; }
-              .toggle { display:flex; align-items:center; gap:10px; color:var(--muted); }
-              .btn { background:var(--accent); border:none; color:#0a0f0a; font-weight:600; padding:10px 14px; border-radius:10px; cursor:pointer; }
-              .btn:disabled { opacity:0.6; cursor:not-allowed; }
-              .main { display:flex; flex-direction:column; }
-              header { display:flex; align-items:center; justify-content:space-between; padding:14px 18px; border-bottom:1px solid #1b1e24; }
-              .status { font-size:13px; color:var(--muted); }
-              .panes { display:grid; grid-template-rows: auto 1fr; gap:10px; padding:12px; }
-              .messages { background:var(--card); border:1px solid #1b1e24; border-radius:10px; padding:12px; max-height:220px; overflow:auto; }
-              iframe { width:100%; height:100%; border:0; background:#000; border-radius:10px; }
-              .timeline { background:var(--card); border:1px solid #1b1e24; border-radius:10px; padding:12px; overflow:auto; }
-              .event { border-bottom:1px solid #1b1e24; padding:8px 0; font-size:14px; }
-              .event .meta { color:var(--muted); font-size:12px; margin-bottom:4px; }
-              .muted { color:var(--muted); }
-              a.link { color:#8ab4ff; text-decoration:none; }
+              body {
+                margin:0; background:var(--bg); color:var(--text);
+                font-family: Inter, -apple-system, system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+              }
+              .app { display:grid; grid-template-columns: 520px 1fr; height:100vh; }
+              .left { display:flex; flex-direction:column; border-right:1px solid var(--border); background:var(--panel-2); }
+              .right { display:flex; flex-direction:column; }
+              .head { display:flex; align-items:center; gap:10px; padding:14px 16px; border-bottom:1px solid var(--border); }
+              .head .dot { width:8px; height:8px; border-radius:50%; background:var(--accent); box-shadow:0 0 0 3px rgba(16,185,129,0.15); }
+              .head .title { font-weight:600; letter-spacing:0.2px; }
+              .actions { display:flex; gap:8px; margin-left:auto; }
+              .btn { background:#1a1f29; color:#d5d9e3; border:1px solid var(--border); font-weight:500; padding:8px 12px; border-radius:10px; cursor:pointer; }
+              .btn:hover{ background:#1d2330; }
+              .btn.primary { background:var(--accent); color:#062; border-color:#0e9f6e; }
+              .muted { color:var(--muted); font-size:12px; }
+
+              .chat { flex:1; overflow:auto; padding:18px; display:flex; flex-direction:column; gap:14px; }
+              .row { display:flex; gap:10px; align-items:flex-start; }
+              .avatar { width:28px; height:28px; border-radius:50%; flex:0 0 28px; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; }
+              .avatar.assistant { background:linear-gradient(135deg,#093,#0a7); color:#eafff6; border:1px solid #0b5; }
+              .avatar.user { background:#243447; color:#cde7ff; border:1px solid #2b3d51; }
+              .bubble { max-width:85%; padding:12px 14px; border-radius:14px; line-height:1.5; border:1px solid var(--border); }
+              .assistant .bubble { background:var(--panel); }
+              .user .bubble { background:var(--user); }
+
+              .input { padding:14px 16px; border-top:1px solid var(--border); display:flex; gap:10px; }
+              .input input { flex:1; background:#0f131a; color:var(--text); border:1px solid var(--border); border-radius:999px; padding:12px 16px; }
+              .send { background:var(--accent); color:#052; border:none; font-weight:700; padding:10px 16px; border-radius:999px; cursor:pointer; }
+
+              .canvasHead { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-bottom:1px solid var(--border); }
+              .pill { font-size:12px; background:#0d141c; color:#9ff5c7; border:1px solid #17333a; padding:4px 8px; border-radius:999px; }
+              .canvasWrap { flex:1; padding:12px; }
+              .viewer { width:100%; height:100%; border:0; background:#000; border-radius:12px; box-shadow: 0 18px 48px rgba(0,0,0,0.35); }
             </style>
           </head>
           <body>
-            <div class=\"wrap\">
-              <aside class=\"side\">
-                <div class=\"card\">
-                  <h3 class=\"title\">Start a Shopping Run</h3>
-                  <label class=\"muted\">Shopping list (one item per line or comma-separated)</label>
-                  <textarea id=\"shopping_list\" placeholder=\"e.g. mjölk, bröd\"></textarea>
-                  <div class=\"row\">
-                    <label class=\"toggle\"><input id=\"headless\" type=\"checkbox\"/> Headless</label>
-                    <button id=\"startBtn\" class=\"btn\">Start</button>
+            <div class=\"app\">
+              <section class=\"left\">
+                <div class=\"head\">
+                  <span class=\"dot\"></span>
+                  <div>
+                    <div class=\"title\">Shopping Agent</div>
+                    <div class=\"muted\" id=\"status\">Stopped</div>
                   </div>
-                  <div class=\"muted\" id=\"runInfo\">No run started</div>
-                  <div style=\"margin-top:10px\"><a class=\"link\" href=\"/ui/desktop\" target=\"_blank\">Open Desktop Viewer</a> · <a class=\"link\" href=\"/ui/live\" target=\"_blank\">Open Live Events</a></div>
+                  <div class=\"actions\">
+                    <button class=\"btn secondary\" id=\"pauseBtn\">Pause</button>
+                    <button class=\"btn secondary\" id=\"resumeBtn\">Resume</button>
+                    <button class=\"btn secondary\" id=\"cancelBtn\">Cancel</button>
+                  </div>
                 </div>
-              </aside>
-              <main class=\"main\">
-                <header>
-                  <div><strong>Shopping Agent</strong> <span class=\"status\" id=\"status\">Idle</span></div>
-                </header>
-                <div class=\"panes\">
-                  <div class=\"messages\" id=\"messages\"></div>
-                  <iframe id=\"viewer\" src=\"/ui/desktop\" style=\"height:60vh\"></iframe>
-                  <div class=\"timeline\" id=\"timeline\"></div>
+                <div id=\"chat\" class=\"chat\"></div>
+                <div class=\"input\">
+                  <input id=\"chatInput\" placeholder=\"Message Shopping Agent… (/shop <item>, /pause, /resume, /cancel)\" />
+                  <button id=\"sendBtn\" class=\"send\">Send</button>
                 </div>
-              </main>
+              </section>
+              <section class=\"right\">
+                <div class=\"canvasHead\">
+                  <div><strong>Canvas</strong> <span class=\"pill\" id=\"runBadge\">No run</span></div>
+                  <div class=\"muted\">noVNC live viewer</div>
+                </div>
+                <div class=\"canvasWrap\">
+                  <iframe id=\"viewer\" class=\"viewer\" src=\"http://localhost:6080/vnc_auto.html?autoconnect=true\"></iframe>
+                </div>
+              </section>
             </div>
+
             <script>
-              const startBtn = document.getElementById('startBtn');
-              const headless = document.getElementById('headless');
-              const shoppingList = document.getElementById('shopping_list');
-              const runInfo = document.getElementById('runInfo');
-              const timeline = document.getElementById('timeline');
+              const chat = document.getElementById('chat');
+              const input = document.getElementById('chatInput');
+              const sendBtn = document.getElementById('sendBtn');
               const statusEl = document.getElementById('status');
-              const msgPane = document.getElementById('messages');
+              const runBadge = document.getElementById('runBadge');
+              const pauseBtn = document.getElementById('pauseBtn');
+              const resumeBtn = document.getElementById('resumeBtn');
+              const cancelBtn = document.getElementById('cancelBtn');
+
               let runId = null;
 
-              function addEvent(evt){
-                const div = document.createElement('div');
-                div.className = 'event';
-                const meta = document.createElement('div');
-                meta.className = 'meta';
-                meta.textContent = '[' + new Date().toLocaleTimeString() + '] ' + (evt.type || 'event');
-                const pre = document.createElement('pre');
-                pre.textContent = JSON.stringify(evt, null, 2);
-                div.appendChild(meta); div.appendChild(pre);
-                timeline.prepend(div);
+              function scrollToBottom(){ chat.scrollTop = chat.scrollHeight; }
+
+              function addMsg(text, who){
+                const row = document.createElement('div');
+                const role = who || 'assistant';
+                row.className = 'row ' + role;
+                const av = document.createElement('div');
+                av.className = 'avatar ' + role;
+                av.textContent = role === 'assistant' ? 'A' : 'U';
+                const bub = document.createElement('div');
+                bub.className = 'bubble';
+                bub.textContent = text;
+                row.appendChild(av); row.appendChild(bub);
+                chat.appendChild(row);
+                scrollToBottom();
+              }
+
+              function mapEventToAssistantText(evt){
+                try {
+                  if (evt.type === 'tool_result') {
+                    const ok = evt.result && evt.result.ok !== undefined ? evt.result.ok : (evt.result ? true : false);
+                    const args = evt.args ? JSON.stringify(evt.args) : '';
+                    return `(${evt.tool}) ${ok ? 'ok' : 'error'} ${args}`;
+                  }
+                  if (evt.type === 'auto_observe') {
+                    const u = evt.data && evt.data.url ? evt.data.url : '';
+                    const m = evt.data && evt.data.modal_present ? ' · cart/modal open' : '';
+                    return `Observed: ${u}${m}`;
+                  }
+                  return JSON.stringify(evt);
+                } catch { return '[event]'; }
               }
 
               function connectEvents(){
                 const proto = (location.protocol === 'https:') ? 'wss' : 'ws';
                 const ws = new WebSocket(proto + '://' + location.host + '/ws/agent-events');
-                ws.onmessage = (e)=>{ try { const evt = JSON.parse(e.data); addEvent(evt); statusEl.textContent = 'Running';
-                  if (evt.type === 'tool_result' || evt.type === 'auto_observe') {
-                    const div = document.createElement('div');
-                    div.style.borderBottom = '1px solid #1b1e24';
-                    div.style.padding = '6px 0';
-                    div.textContent = JSON.stringify(evt, null, 2);
-                    msgPane.prepend(div);
-                    // keep only last ~8 messages
-                    while (msgPane.childElementCount > 8) msgPane.removeChild(msgPane.lastChild);
-                  }
-                } catch {} };
-                ws.onclose = ()=>{ statusEl.textContent = 'Idle'; };
+                ws.onopen = () => { statusEl.textContent = 'Running'; };
+                ws.onclose = () => { statusEl.textContent = 'Stopped'; setTimeout(connectEvents, 1500); };
+                ws.onmessage = (e) => {
+                  try {
+                    const evt = JSON.parse(e.data);
+                    if (!evt) return;
+                    addMsg(mapEventToAssistantText(evt), 'assistant');
+                    if (evt.type === 'tool_result' && evt.tool === 'finalize' && evt.result && evt.result.status){
+                      addMsg('Done: ' + evt.result.status, 'assistant');
+                    }
+                  } catch {}
+                };
               }
 
-              startBtn.onclick = async ()=>{
-                startBtn.disabled = true;
+              async function startShopping(shoppingList){
+                addMsg('You: /shop ' + shoppingList, 'user');
                 try {
-                  const payload = {
-                    store: 'coop_se',
-                    headless: !!headless.checked,
-                    debug: true,
-                    task_queue: 'shopping-agent-task-queue',
-                    shopping_list: shoppingList.value
-                  };
-                  const res = await fetch('/v2/run/shopping', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                  const payload = { store:'coop_se', headless:false, debug:true, task_queue:'shopping-agent-task-queue', shopping_list: shoppingList };
+                  const res = await fetch('/v2/run/shopping', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
                   const json = await res.json();
                   if (json.workflow_id){
-                    runId = json.workflow_id;
-                    runInfo.textContent = 'Run: ' + runId;
-                    statusEl.textContent = 'Running';
-                    connectEvents();
-                    try { window.open('/ui/desktop', '_blank'); } catch(e) {}
-                    try { window.open('/ui/live', '_blank'); } catch(e) {}
+                    runId = json.workflow_id; runBadge.textContent = runId; statusEl.textContent = 'Running';
+                  } else if (json.error){
+                    addMsg('Error: ' + json.error, 'assistant');
                   }
-                } catch (e) { console.error(e); }
-                finally { startBtn.disabled = false; }
+                } catch (e) { addMsg('Error starting: ' + (e && e.message ? e.message : e), 'assistant'); }
+              }
+
+              async function signal(kind){
+                if (!runId){ addMsg('No active run', 'assistant'); return; }
+                const url = kind === 'pause' ? '/v2/signal/pause' : kind === 'resume' ? '/v2/signal/resume' : '/v2/signal/cancel';
+                try {
+                  await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ workflow_id: runId }) });
+                  addMsg('You: /' + kind, 'user');
+                } catch (e) { addMsg('Signal failed: ' + (e && e.message ? e.message : e), 'assistant'); }
+              }
+
+              sendBtn.onclick = () => {
+                const text = (input.value || '').trim();
+                if (!text) return;
+                if (text.startsWith('/shop')) {
+                  const q = text.replace('/shop', '').trim();
+                  startShopping(q || 'mjölk');
+                } else if (text === '/pause') {
+                  signal('pause');
+                } else if (text === '/resume') {
+                  signal('resume');
+                } else if (text === '/cancel') {
+                  signal('cancel');
+                } else {
+                  addMsg('You: ' + text, 'user');
+                }
+                input.value = '';
               };
+
+              input.addEventListener('keydown', (e)=>{ if (e.key === 'Enter'){ e.preventDefault(); sendBtn.click(); }});
+
+              // init
+              addMsg('Hi! Type /shop mjölk to start a run. Use /pause, /resume, /cancel to control it.', 'assistant');
+              connectEvents();
             </script>
           </body>
         </html>
@@ -392,6 +466,7 @@ async def v2_run_authentication(req: V2RunRequest) -> JSONResponse:
         client = await get_temporal_client()
         payload = req.model_dump()
         workflow_id = req.workflow_id or f"auth-{uuid.uuid4()}"
+        payload["workflow_id"] = workflow_id
         handle = await client.start_workflow(
             AuthenticationWorkflow.run,
             payload,
@@ -409,6 +484,7 @@ async def v2_run_shopping(req: V2RunRequest) -> JSONResponse:
         client = await get_temporal_client()
         payload = req.model_dump()
         workflow_id = req.workflow_id or f"shop-{uuid.uuid4()}"
+        payload["workflow_id"] = workflow_id
         handle = await client.start_workflow(
             ShoppingWorkflow.run,
             payload,

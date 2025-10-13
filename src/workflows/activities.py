@@ -33,6 +33,7 @@ async def run_shopping_activity(payload: Dict[str, Any]) -> Dict[str, Any]:
     store = payload.get("store", "coop_se")
     headless = bool(payload.get("headless", True))
     debug = bool(payload.get("debug", False))
+    workflow_id = payload.get("workflow_id") or "shopping"
 
     agent = ShoppingAgent(store=store)
     async with launch_browser(headless=headless) as browser:
@@ -45,6 +46,8 @@ async def run_shopping_activity(payload: Dict[str, Any]) -> Dict[str, Any]:
                     goal = f"Shop the following items: {shopping_list}. Add exactly 1 unit of each, then open the cart."
                 else:
                     goal = "Find 'mjölk', add 1 unit to cart, then open the cart."
+                # Ensure a clean context per run: new browser context already isolates storage.
+                # Also tag events with workflow_id to correlate in UI if needed.
                 result = await agent.run(goal=goal, env=env, debug=debug)
                 return result
 

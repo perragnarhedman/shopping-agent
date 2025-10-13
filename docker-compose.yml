@@ -19,6 +19,7 @@ services:
       - ./configs:/app/configs
       - ./logs:/app/logs
       - ./data:/app/data
+      - ./main.py:/app/main.py
     ports:
       - "8000:8000"
     networks:

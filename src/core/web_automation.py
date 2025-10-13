@@ -20,6 +20,11 @@ async def launch_browser(headless: bool = True) -> AsyncIterator[Browser]:
 @asynccontextmanager
 async def new_context(browser: Browser) -> AsyncIterator[BrowserContext]:
     context = await browser.new_context()
+    # Clear any persisted state to avoid stale autofill/search: ensure fresh context
+    try:
+        await context.clear_cookies()
+    except Exception:
+        pass
     try:
         yield context
     finally:

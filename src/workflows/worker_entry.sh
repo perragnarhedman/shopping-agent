@@ -4,17 +4,32 @@ set -euo pipefail
 # Start X virtual framebuffer for a desktop at 1440x900x24 and prep Xauthority
 export DISPLAY=:99
 Xvfb :99 -screen 0 1440x900x24 -ac +extension RANDR &
-sleep 0.5
+# Wait for Xvfb UNIX socket to be ready (:99)
+python - <<'PY'
+import os, socket, time
+sock_path = "/tmp/.X11-unix/X99"
+for _ in range(120):  # up to ~30s
+    if os.path.exists(sock_path):
+        try:
+            s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            s.settimeout(0.25)
+            s.connect(sock_path)
+            s.close()
+            break
+        except Exception:
+            pass
+    time.sleep(0.25)
+PY
 touch /root/.Xauthority || true
 
 # Start x11vnc bound to the Xvfb display (no auth needed since Xvfb started with -ac)
-x11vnc -display :99 -nopw -forever -shared -rfbport 5900 -listen 0.0.0.0 -o /tmp/x11vnc.log &
+x11vnc -display :99 -nopw -forever -shared -rfbport 5900 -listen 0.0.0.0 -wait 5 -o /tmp/x11vnc.log &
 
 # Wait for VNC port to be ready to avoid noVNC race
 python - <<'PY'
 import socket, time
 s = socket.socket()
-for _ in range(40):
+for _ in range(240):  # up to ~60s
     try:
         s.connect(("127.0.0.1", 5900))
         s.close()
@@ -31,7 +46,7 @@ if [ -d "$NOVNC_DIR" ]; then
   python - <<'PY'
 import socket, time
 s = socket.socket()
-for _ in range(40):
+for _ in range(240):  # up to ~60s
     try:
         s.connect(("127.0.0.1", 6080))
         s.close()

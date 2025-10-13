@@ -52,6 +52,16 @@ class AgentSDKRunner:
         last_config_value: Any | None = None
         trace: List[Dict[str, Any]] = []
 
+        # Ensure clean page state for each run: clear history and localStorage/sessionStorage
+        try:
+            await page_env.page.context.clear_cookies()
+        except Exception:
+            pass
+        try:
+            await page_env.page.add_init_script("window.localStorage.clear(); window.sessionStorage.clear();")
+        except Exception:
+            pass
+
         while steps_used < self._max_total_steps:
             resp = await self._client.chat.completions.create(
                 model=self._model,
