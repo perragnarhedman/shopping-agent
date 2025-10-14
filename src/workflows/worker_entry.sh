@@ -3,6 +3,9 @@ set -euo pipefail
 
 # Start X virtual framebuffer for a desktop at 1440x900x24 and prep Xauthority
 export DISPLAY=:99
+# Clear any stale X lock/socket from previous runs
+rm -f /tmp/.X99-lock 2>/dev/null || true
+rm -f /tmp/.X11-unix/X99 2>/dev/null || true
 Xvfb :99 -screen 0 1440x900x24 -ac +extension RANDR &
 # Wait for Xvfb UNIX socket to be ready (:99)
 python - <<'PY'
