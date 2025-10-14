@@ -63,6 +63,9 @@ class AgentSDKRunner:
         except Exception:
             pass
 
+        # simple retry accounting to nudge HITL if stuck
+        consecutive_failures = 0
+
         while steps_used < self._max_total_steps:
             # If a modal is currently visible, surface any known resolution recipe as guidance
             try:
@@ -184,6 +187,11 @@ class AgentSDKRunner:
                     "content": json.dumps(result, ensure_ascii=False),
                 })
                 steps_used += 1
+                # update failure counter
+                if isinstance(result, dict) and not result.get("ok", True):
+                    consecutive_failures += 1
+                else:
+                    consecutive_failures = 0
 
                 # Keep a trace similar to the legacy runner
                 if debug:
@@ -208,6 +216,15 @@ class AgentSDKRunner:
                     "role": "assistant",
                     "content": f"CONTEXT_AUTO_OBSERVE: {json.dumps(auto_obs)}",
                 })
+                # If repeated failures or a modal persists, nudge the model to ask for HITL
+                try:
+                    if consecutive_failures >= 2 or auto_obs.get("modal_present"):
+                        messages.append({
+                            "role": "assistant",
+                            "content": "CONTEXT_HINT: If blocked, call request_input(kind='modal_help', prompt='Describe the visible dialog/button text and what you need to proceed').",
+                        })
+                except Exception:
+                    pass
                 try:
                     await publish_event({"type": "auto_observe", "data": auto_obs})
                 except Exception:
