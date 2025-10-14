@@ -4,7 +4,7 @@ import asyncio
 from dataclasses import dataclass
 from typing import Dict, Optional
 
-from src.core.memory_store import MemoryStore
+from typing import Any
 
 
 @dataclass
@@ -15,7 +15,7 @@ class PendingInput:
 
 class HumanIOBroker:
     def __init__(self) -> None:
-        self._store = MemoryStore()
+        self._store: dict[str, Any] = {}
         self._pending: Dict[str, PendingInput] = {}
 
     async def wait_for_input(self, run_id: str, kind: str, timeout_seconds: int = 120) -> str:
