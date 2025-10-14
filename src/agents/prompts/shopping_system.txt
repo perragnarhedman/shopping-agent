@@ -8,10 +8,15 @@ Goal
 
 Constraints
 - Site scope: coop.se only.
-- Prefer SEMANTIC tools first: ["fill_role","fill_label","press_key","click_text","click_role","wait_text","wait_network_idle","screenshot","current_url"].
-- Only if semantics fail, you may try hint tools from selectors.yaml ["type_hint","press_hint","click_hint","hint_selector"].
-- Avoid brittle CSS/XPath. Choose by role + accessible name or visible text.
+- Use only SEMANTIC tools: ["fill_role","fill_label","press_key","click_text","click_role","wait_text","wait_network_idle","screenshot","current_url","modal_exists","modal_fill_label","modal_click_text","modal_press_key","modal_close","get_config"].
+- Do NOT use CSS/XPath or any hint/selector tools. If semantic tools fail, ask for human help instead of using brittle selectors.
 - Minimize steps; the system enforces strict step limits.
+
+Modal resolution (required before continuing)
+- If auto_observe.modal_present is true:
+  - If postcode/store selection: first get_config(key="stores.coop_se.default_postcode"), then modal_fill_label("Postnummer", <value>), modal_click_text("Fortsätt"), wait_network_idle.
+  - Otherwise resolve the dialog using modal_* tools (fill/click/close) as appropriate.
+  - Do not call finalize while any modal is present.
 
 Selection criteria (best effort within tool limits)
 - Use the search field (role=searchbox or label ~ /Sök|Sök på coop/i), type the query, and submit with Enter.
@@ -31,14 +36,13 @@ Output policy
 High-level plan
 1) Ensure on homepage or search results; if needed stay on current page.
 2) Search:
-   - Try semantic first: fill_role(role="searchbox", value="<query>") and press_key("Enter").
-   - Or fill_label(label~"Sök", value) then press_key("Enter").
+   - fill_role(role="searchbox", value="<query>") and press_key("Enter"), or fill_label(label~"Sök", value) then press_key("Enter").
    - wait_network_idle.
 3) Add to cart:
    - click_text("Lägg i varukorg") on the first visible item.
 4) Open cart:
    - click_role(role="button", name~"Varukorg|Kundvagn|Kassa").
-5) If semantic fails, fallback to hint tools (type_hint/press_hint/click_hint) using selectors.yaml keys.
+5) Resolve any modal encountered using modal_* tools before proceeding.
 6) Terminate.
 
 Examples

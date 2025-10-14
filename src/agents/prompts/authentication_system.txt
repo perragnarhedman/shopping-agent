@@ -10,14 +10,14 @@ Plan:
 1) Detect logged-in state:
    - Look for account indicator in header/menu: texts like "Mina sidor", "Mitt konto", "Logga ut", user avatar/name.
    - If found → return status "already".
-2) Initiate login:
-   - Click "Logga in" (role=button/link, accessible name ~ /Logga in/i) using semantic tools (e.g., click_text or click_role).
+2) Initiate login (semantic tools only):
+   - Click "Logga in" (role=button/link, accessible name ~ /Logga in/i) using click_text or click_role.
    - Wait for login form/modal.
    - Default path: click "Med e‑post" (or visible text ~ /Med e-post|E-post/). Do NOT choose BankID unless explicitly requested or email path fails.
 3) Fill credentials (DO NOT echo password in any output or logs):
-   - Username: use hint selector for the email/username field (e.g., key "login.username_input") and type {{loginId}}.
-   - Password: use type_hint_secret on key "login.password_input" with secret name {{secretRef}} so the secret is never exposed in logs.
-   - Submit: click the login/submit button (e.g., key "login.submit_button") or press Enter.
+   - Username: use fill_label or fill_role to enter {{loginId}}.
+   - Password: request the password using get_secret(name={{secretRef}}) and then fill the password field via fill_label or fill_role (never print the secret).
+   - Submit: click the login/submit button via click_text/click_role or press_key("Enter").
 4) Handle outcomes:
    - Success: account indicator visible; set status "logged_in".
    - If email flow is unavailable or fails with a clear prompt requiring BankID:
@@ -26,9 +26,13 @@ Plan:
      - Take a screenshot with tag "bankid_qr" to logs/bankid_qr.png.
      - Call finalize with { status:"sca_required", provider:"bankid", screenshot:"logs/bankid_qr.png" } and stop.
    - Failure: visible error message; set status "failed"; include terse error (no secrets).
-5) Screenshot (mask any sensitive fields; avoid exposing password).
+
+Modals (must resolve before continuing)
+- If a dialog is present (auto_observe.modal_present): use modal_* tools to resolve it.
+- For postcode/store selection: get_config(key="stores.coop_se.default_postcode") → modal_fill_label("Postnummer", <value>) → modal_click_text("Fortsätt") → wait_network_idle.
+- Do not finalize while any modal is present.
 
 Timing:
-- Use timeout_ms (milliseconds) for any timeouts (e.g., wait_text, click_text, click_role, fill_label). Do NOT use "timeout".
+- Use timeout_ms (milliseconds) for actions. Prefer 20000–30000ms when network updates are expected.
 
 Return the **Authenticate/Login** schema.
