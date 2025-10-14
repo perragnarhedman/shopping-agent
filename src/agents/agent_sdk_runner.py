@@ -10,6 +10,7 @@ from src.agents.sdk_tools import build_openai_tools, execute_tool
 from src.agents.tools import ToolEnv
 from src.utils.config_loader import ConfigLoader
 from src.core.events import publish_event
+from src.core.memory_store import retrieve_known_resolution, record_experience
 
 
 class AgentSDKRunner:
@@ -63,6 +64,31 @@ class AgentSDKRunner:
             pass
 
         while steps_used < self._max_total_steps:
+            # If a modal is currently visible, surface any known resolution recipe as guidance
+            try:
+                auto_probe = await self._auto_observe_snapshot(page_env)
+                if auto_probe.get("modal_present"):
+                    # Build a simple signature from url host and modal title/text keywords
+                    import urllib.parse
+                    parsed = urllib.parse.urlparse(auto_probe.get("url") or "")
+                    site = (parsed.hostname or "").lower()
+                    title = (auto_probe.get("modal_title") or "").lower()
+                    text = (auto_probe.get("modal_text") or "").lower()
+                    signature = {
+                        "site": site,
+                        "title_kws": [w for w in title.split()[:6]],
+                        "text_kws": [w for w in text.split()[:10]],
+                    }
+                    recipe = await retrieve_known_resolution("modal", signature)
+                    if recipe:
+                        # Provide a KNOWN_RESOLUTION hint while keeping the model in control
+                        hint_steps = "; ".join([f"{step.get('tool')}({step.get('args', {})})" for step in recipe])
+                        messages.append({
+                            "role": "assistant",
+                            "content": f"KNOWN_RESOLUTION: Based on past successful runs, try: {hint_steps}",
+                        })
+            except Exception:
+                pass
             resp = await self._client.chat.completions.create(
                 model=self._model,
                 temperature=self._temperature,

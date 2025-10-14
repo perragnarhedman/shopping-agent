@@ -15,6 +15,7 @@ from src.core.web_automation import (
 )
 from src.utils.config_loader import ConfigLoader
 from src.agents.human_io import human_broker
+from src.core.events import publish_event
 import os
 
 
@@ -190,8 +191,27 @@ async def t_request_input(env: ToolEnv, *, kind: str = "generic", prompt: str = 
     if not env.run_id:
         return {"ok": False, "error": "run_id not set in environment"}
     try:
+        # Notify UI: awaiting human input
+        try:
+            await publish_event({
+                "type": "awaiting_human",
+                "run_id": env.run_id,
+                "kind": kind or "generic",
+                "prompt": prompt or "",
+            })
+        except Exception:
+            pass
         req_kind = kind or "generic"
         value = await human_broker.wait_for_input(env.run_id, req_kind, timeout_seconds=timeout_seconds)
+        # Notify UI: human input received (do not include value)
+        try:
+            await publish_event({
+                "type": "human_input",
+                "run_id": env.run_id,
+                "kind": req_kind,
+            })
+        except Exception:
+            pass
         return {"ok": True, "value": value}
     except Exception as exc:  # noqa: BLE001
         return {"ok": False, "error": str(exc)}
