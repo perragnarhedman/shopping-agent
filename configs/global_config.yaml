@@ -12,7 +12,7 @@ agents:
   temperature: 0.0
   max_steps_per_agent: 5
   max_agents: 3
-  max_total_steps: 16
+  max_total_steps: 32
   timeouts:
     per_step_seconds: 30
   max_actions_per_step: 8
