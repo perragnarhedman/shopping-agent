@@ -353,8 +353,76 @@ async def ui_start() -> HTMLResponse:
                     const m = evt.data && evt.data.modal_present ? ' · cart/modal open' : '';
                     return `Observed: ${u}${m}`;
                   }
+                  if (evt.type === 'awaiting_human') {
+                    return null; // handled separately
+                  }
+                  if (evt.type === 'human_input') {
+                    return `Human input received: ${evt.value}`;
+                  }
+                  if (evt.type === 'human_input_failed') {
+                    return `Human input failed: ${evt.error}`;
+                  }
                   return JSON.stringify(evt);
                 } catch { return '[event]'; }
+              }
+
+              function showHumanInputForm(runId, kind, prompt){
+                // Remove any existing input form
+                const existing = document.getElementById('hitl-form-wrapper');
+                if (existing) existing.remove();
+
+                // Create new form wrapper
+                const wrapper = document.createElement('div');
+                wrapper.id = 'hitl-form-wrapper';
+                wrapper.style.cssText = 'margin:1rem 0; padding:1rem; background:#f9fafb; border-radius:0.5rem; border:1px solid #e5e7eb;';
+
+                // Prompt text
+                const promptP = document.createElement('p');
+                promptP.style.cssText = 'margin:0 0 0.75rem 0; font-weight:500; color:#374151;';
+                promptP.textContent = prompt || 'Agent is waiting for your input:';
+                wrapper.appendChild(promptP);
+
+                // Input field
+                const inputField = document.createElement('input');
+                inputField.type = 'text';
+                inputField.id = 'hitl-input';
+                inputField.placeholder = 'Type your response here...';
+                inputField.style.cssText = 'width:100%; padding:0.5rem; border:1px solid #d1d5db; border-radius:0.375rem; margin-bottom:0.5rem;';
+                wrapper.appendChild(inputField);
+
+                // Submit button
+                const submitBtn = document.createElement('button');
+                submitBtn.textContent = 'Submit';
+                submitBtn.style.cssText = 'padding:0.5rem 1rem; background:#10b981; color:#fff; border:none; border-radius:0.375rem; cursor:pointer; font-weight:500;';
+                submitBtn.onclick = async () => {
+                  const value = inputField.value.trim();
+                  if (!value) return;
+                  try {
+                    const formData = new FormData();
+                    formData.append('run_id', runId);
+                    formData.append('kind', kind);
+                    formData.append('value', value);
+                    await fetch('/agent/input', { method:'POST', body: formData });
+                    addMsg('You: ' + value, 'user');
+                    wrapper.remove();
+                  } catch (e) {
+                    addMsg('Failed to send input: ' + (e && e.message ? e.message : e), 'assistant');
+                  }
+                };
+                wrapper.appendChild(submitBtn);
+                
+                // Enter key support
+                inputField.addEventListener('keydown', (e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    submitBtn.click();
+                  }
+                });
+
+                // Add to chat
+                chat.appendChild(wrapper);
+                scrollToBottom();
+                inputField.focus();
               }
 
               function connectEvents(){
@@ -366,7 +434,16 @@ async def ui_start() -> HTMLResponse:
                   try {
                     const evt = JSON.parse(e.data);
                     if (!evt) return;
-                    addMsg(mapEventToAssistantText(evt), 'assistant');
+                    
+                    // Handle awaiting_human specially
+                    if (evt.type === 'awaiting_human') {
+                      addMsg('Agent is waiting for your input...', 'assistant');
+                      showHumanInputForm(evt.run_id, evt.kind, evt.prompt);
+                      return;
+                    }
+                    
+                    const txt = mapEventToAssistantText(evt);
+                    if (txt) addMsg(txt, 'assistant');
                     if (evt.type === 'tool_result' && evt.tool === 'finalize' && evt.result && evt.result.status){
                       addMsg('Done: ' + evt.result.status, 'assistant');
                     }

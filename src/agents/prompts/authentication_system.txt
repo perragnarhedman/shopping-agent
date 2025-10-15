@@ -24,7 +24,9 @@ Plan:
      - Click the button "Med BankID" to open the BankID flow.
      - Wait until the BankID page/prompt is visible (e.g., text contains "BankID" or a QR prompt such as "Skanna QR-kod" / "Öppna BankID-appen"). Use timeout_ms.
      - Take a screenshot with tag "bankid_qr" to logs/bankid_qr.png.
-     - Call finalize with { status:"sca_required", provider:"bankid", screenshot:"logs/bankid_qr.png" } and stop.
+     - Call request_input(kind="bankid_done", prompt="Please scan the QR code with your BankID app and confirm when authentication is complete.", timeout_seconds=120).
+     - After receiving confirmation, verify logged-in state (check for account indicator).
+     - If verified: set status "logged_in"; otherwise set status "failed" with error.
    - Failure: visible error message; set status "failed"; include terse error (no secrets).
 
 Modals (must resolve before continuing)
