@@ -465,6 +465,20 @@ async def ui_start() -> HTMLResponse:
                 } catch (e) { addMsg('Error starting: ' + (e && e.message ? e.message : e), 'assistant'); }
               }
 
+              async function startAuth(){
+                addMsg('You: /auth', 'user');
+                try {
+                  const payload = { store:'coop_se', headless:false, debug:true, task_queue:'shopping-agent-task-queue', login_method:'bankid' };
+                  const res = await fetch('/v2/run/authentication', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+                  const json = await res.json();
+                  if (json.workflow_id){
+                    runId = json.workflow_id; runBadge.textContent = runId; statusEl.textContent = 'Running';
+                  } else if (json.error){
+                    addMsg('Error: ' + json.error, 'assistant');
+                  }
+                } catch (e) { addMsg('Error starting: ' + (e && e.message ? e.message : e), 'assistant'); }
+              }
+
               async function signal(kind){
                 if (!runId){ addMsg('No active run', 'assistant'); return; }
                 const url = kind === 'pause' ? '/v2/signal/pause' : kind === 'resume' ? '/v2/signal/resume' : '/v2/signal/cancel';
@@ -480,6 +494,8 @@ async def ui_start() -> HTMLResponse:
                 if (text.startsWith('/shop')) {
                   const q = text.replace('/shop', '').trim();
                   startShopping(q || 'mjölk');
+                } else if (text === '/auth') {
+                  startAuth();
                 } else if (text === '/pause') {
                   signal('pause');
                 } else if (text === '/resume') {
@@ -495,7 +511,7 @@ async def ui_start() -> HTMLResponse:
               input.addEventListener('keydown', (e)=>{ if (e.key === 'Enter'){ e.preventDefault(); sendBtn.click(); }});
 
               // init
-              addMsg('Hi! Type /shop mjölk to start a run. Use /pause, /resume, /cancel to control it.', 'assistant');
+              addMsg('Hi! Type /shop mjölk to start shopping or /auth to test authentication. Use /pause, /resume, /cancel to control runs.', 'assistant');
               connectEvents();
             </script>
           </body>
