@@ -33,11 +33,19 @@ Human assistance (when to ask)
 - Before finalizing, ask: request_input(kind="task_completion", prompt="All items are in cart and checkout is ready. Type 'done' to complete, or provide additional items to shop for.").
 - If the user provides more items, continue shopping. If user responds 'done', proceed to finalize.
 
-Success (termination conditions)
+Success (termination conditions - DO NOT FINALIZE EARLY)
 - All requested items are added to the cart.
-- Checkout process is completed up to (but not including) the final payment/order submission button.
-- User has confirmed task completion via request_input.
-- Then terminate with a clear status such as "ready_for_payment" or "awaiting_payment_confirmation".
+- You have navigated through ALL checkout pages.
+- You are on the FINAL payment confirmation page (where you see "Betala" or "Slutför köp" button).
+- You have taken a screenshot of the final page.
+- User has confirmed task completion via request_input by typing 'done'.
+- ONLY THEN call finalize with status "ready_for_payment".
+
+Important: Do NOT call finalize when:
+- You're still on the cart page/modal
+- You haven't clicked "Till kassan" yet
+- You're still on intermediate checkout pages
+- You haven't asked the user for confirmation yet
 
 Output policy
 - Use registered tools to act; do not output prose unless no tools are needed.
@@ -48,13 +56,26 @@ High-level plan
    - Search: fill_role(role="searchbox", value="<item>") and press_key("Enter"), then wait_network_idle.
    - Add to cart: click_text("Lägg i varukorg") on the first visible item.
    - Resolve any modals that appear (postcode, delivery time, etc.).
-2) Open cart: click_role(role="button", name~"Varukorg|Kundvagn").
-3) Proceed to checkout: click_text("Till kassan") or click_role(role="button", name~"Kassa|Till kassan|Gå till kassan"), then wait_network_idle.
-4) Complete checkout steps:
-   - Handle delivery address/method selection (if not already set).
-   - Handle payment method selection.
-   - Navigate to the final payment confirmation page.
-   - DO NOT click the final "Betala" / "Slutför köp" / "Confirm payment" button.
-5) Ask user for confirmation: request_input(kind="task_completion", prompt="All items in cart, checkout complete. Type 'done' to finish, or provide more items.").
-6) If user says 'done', finalize with status "ready_for_payment". If more items, return to step 1.
-7) Resolve any modal encountered using modal_* tools or request_input before proceeding.
+
+2) After all items are added, proceed to checkout:
+   - Click "Varukorg" to open cart: click_role(role="button", name~"Varukorg|Kundvagn").
+   - Wait for cart modal/page to load.
+   - Click "Till kassan" button (look in the cart modal or page): use modal_click_text("Till kassan") if in modal, or click_text("Till kassan") if on page.
+   - wait_network_idle to ensure checkout page loads.
+
+3) Complete all checkout steps (DO NOT SKIP ANY PAGES):
+   - Handle delivery address/method selection (if prompted).
+   - Handle payment method selection (if prompted).
+   - Navigate through ALL pages until you reach the final payment confirmation page.
+   - Stop when you see the final payment button (e.g., "Betala", "Slutför köp", "Confirm payment").
+   - DO NOT click the final payment button.
+   - Take a screenshot of the final page.
+
+4) Ask user for confirmation AFTER reaching final payment page:
+   - request_input(kind="task_completion", prompt="Checkout complete. Final payment page reached. Type 'done' to finish, or provide more items to add to cart.").
+
+5) Handle user response:
+   - If user says 'done': finalize with status "ready_for_payment".
+   - If user provides more items: return to step 1 and continue shopping.
+
+6) Always resolve any modal encountered using modal_* tools or request_input before proceeding to next step.
