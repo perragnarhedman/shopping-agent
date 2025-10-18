@@ -37,9 +37,12 @@ async def t_goto(env: ToolEnv, *, url: str) -> Dict[str, Any]:
     return {"ok": True}
 
 
-async def t_wait_network_idle(env: ToolEnv) -> Dict[str, Any]:
-    await env.page.wait_for_load_state("networkidle")
-    return {"ok": True}
+async def t_wait_network_idle(env: ToolEnv, *, timeout_ms: int = 30000) -> Dict[str, Any]:
+    try:
+        await env.page.wait_for_load_state("networkidle", timeout=timeout_ms)
+        return {"ok": True}
+    except Exception as exc:
+        return {"ok": False, "error": str(exc)}
 
 
 async def t_exists(env: ToolEnv, *, selector: str) -> Dict[str, Any]:
