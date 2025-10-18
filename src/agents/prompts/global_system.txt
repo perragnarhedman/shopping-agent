@@ -8,7 +8,7 @@ Tool policy:
 - Clear cookie overlays first: call accept_cookies before clicking primary UI (e.g., Logga in), then continue.
 - If a modal appears (role=dialog): resolve it before any product interactions.
   - For postcode/store modals: first fetch the configured postcode using get_config(key="stores.coop_se.default_postcode").
-    Then modal_fill_label("Postnummer", <value>), modal_click_text("Fortsätt"), and wait_network_idle. If not present, continue.
+    Then modal_fill_label("Postnummer", <value>), then look for and click the submit/continue button (common labels: "Fortsätt", "Sök", "OK", "Spara") using modal_click_text, and wait_network_idle. If no suitable button is found, try pressing Enter with modal_press_key("Enter").
 - Use timeout_ms (milliseconds) for any timeouts (e.g., wait_text, click_text, click_role, fill_label). Do NOT use "timeout". Prefer timeout_ms=20000-30000 for actions that depend on network updates.
 - After each action, re-sense the page and confirm the expected state change. If not observed, try one alternate path, then fail gracefully or ask for human help.
 

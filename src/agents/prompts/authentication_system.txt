@@ -32,7 +32,7 @@ Plan:
 
 Modals (must resolve before continuing)
 - If a dialog is present (auto_observe.modal_present): use modal_* tools to resolve it.
-- For postcode/store selection: get_config(key="stores.coop_se.default_postcode") → modal_fill_label("Postnummer", <value>) → modal_click_text("Fortsätt") → wait_network_idle.
+- For postcode/store selection: get_config(key="stores.coop_se.default_postcode") → modal_fill_label("Postnummer", <value>) → identify and click the submit button (common labels: "Fortsätt", "Sök", "OK") using modal_click_text → wait_network_idle. If no button works, try modal_press_key("Enter").
 - Do not finalize while any modal is present.
 
 Timing:

@@ -14,7 +14,7 @@ Constraints
 
 Modal resolution (required before continuing)
 - If auto_observe.modal_present is true:
-  - If postcode/store selection: first get_config(key="stores.coop_se.default_postcode"), then modal_fill_label("Postnummer", <value>), modal_click_text("Fortsätt"), wait_network_idle.
+  - If postcode/store selection: first get_config(key="stores.coop_se.default_postcode"), then modal_fill_label("Postnummer", <value>), then identify and click the submit button (look for labels like "Fortsätt", "Sök", "OK", "Spara") using modal_click_text with appropriate text, then wait_network_idle. If clicking fails, try modal_press_key("Enter").
   - Otherwise resolve the dialog using modal_* tools (fill/click/close) as appropriate.
   - Do not call finalize while any modal is present.
 
