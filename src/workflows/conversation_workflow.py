@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Any, Dict, List
+from datetime import timedelta
 
 from temporalio import workflow
+from temporalio.common import RetryPolicy
 
 from .activities import (
     run_conversation_activity,
@@ -29,6 +31,13 @@ class ConversationState:
 class ConversationWorkflow:
     def __init__(self):
         self.state = ConversationState()
+        # Retry policy: max 2 retries, exponential backoff
+        self.retry_policy = RetryPolicy(
+            maximum_attempts=2,
+            initial_interval=timedelta(seconds=2),
+            maximum_interval=timedelta(seconds=10),
+            backoff_coefficient=2.0
+        )
     
     @workflow.run
     async def run(self, payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -53,7 +62,8 @@ class ConversationWorkflow:
                 "session_context": self.state.session_context,
                 "clarification_count": self.state.clarification_count
             },
-            start_to_close_timeout=workflow.timedelta(seconds=30)
+            start_to_close_timeout=workflow.timedelta(seconds=30),
+            retry_policy=self.retry_policy
         )
         
         # Update clarification count
@@ -91,7 +101,8 @@ class ConversationWorkflow:
                     "session_context": self.state.session_context,
                     "clarification_count": 0
                 },
-                start_to_close_timeout=workflow.timedelta(seconds=30)
+                start_to_close_timeout=workflow.timedelta(seconds=30),
+                retry_policy=self.retry_policy
             )
             response_message = follow_up_decision["conversation_response"]
         else:
@@ -123,13 +134,15 @@ class ConversationWorkflow:
                 result = await workflow.execute_activity(
                     run_authentication_activity,
                     task_payload,
-                    start_to_close_timeout=workflow.timedelta(seconds=1800)
+                    start_to_close_timeout=workflow.timedelta(seconds=1800),
+                    retry_policy=self.retry_policy
                 )
             elif agent_type == "shopping":
                 result = await workflow.execute_activity(
                     run_shopping_activity,
                     {**task_payload, "workflow_id": workflow.info().workflow_id, "store": "coop_se", "headless": False, "debug": True},
-                    start_to_close_timeout=workflow.timedelta(seconds=1800)
+                    start_to_close_timeout=workflow.timedelta(seconds=1800),
+                    retry_policy=self.retry_policy
                 )
             else:
                 result = {"ok": False, "error": f"Unknown agent type: {agent_type}"}

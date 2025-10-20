@@ -18,7 +18,8 @@ class ConversationAgent:
     def __init__(self):
         cfg = ConfigLoader.load_global_config()
         agents_cfg = cfg.get("agents", {})
-        self._model = agents_cfg.get("model", "gpt-4o-mini")
+        # Use gpt-4o-mini for conversation (cheaper, faster) instead of gpt-4.1
+        self._model = "gpt-4o-mini"
         self._temperature = 0.3  # Slightly creative for natural conversation
         self._client = AsyncOpenAI()
         self._logger = logging.getLogger(__name__)
