@@ -8,9 +8,10 @@ from temporalio.client import Client
 from temporalio.worker import Worker
 
 from src.core.logger import setup_logging
-from .activities import run_authentication_activity, run_shopping_activity
+from .activities import run_authentication_activity, run_shopping_activity, run_conversation_activity
 from .auth_workflow import AuthenticationWorkflow
 from .shopping_workflow import ShoppingWorkflow
+from .conversation_workflow import ConversationWorkflow
 
 
 async def main() -> None:
@@ -27,8 +28,8 @@ async def main() -> None:
     worker = Worker(
         client,
         task_queue=task_queue,
-        workflows=[AuthenticationWorkflow, ShoppingWorkflow],
-        activities=[run_authentication_activity, run_shopping_activity],
+        workflows=[AuthenticationWorkflow, ShoppingWorkflow, ConversationWorkflow],
+        activities=[run_authentication_activity, run_shopping_activity, run_conversation_activity],
     )
 
     await worker.run()

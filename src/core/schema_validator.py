@@ -48,6 +48,18 @@ def try_validate_with_jsonschema(schema: Dict[str, Any], data: Any) -> Tuple[boo
     return (len(errors) == 0, None if not errors else errors)
 
 
+class SchemaValidator:
+    """Simple wrapper class for JSON Schema validation."""
+    
+    def __init__(self, schema_path: str):
+        """Load schema from file path."""
+        self.schema = load_json_schema_from_file(schema_path)
+    
+    def validate(self, data: Any) -> Tuple[bool, Optional[list[str]]]:
+        """Validate data against the loaded schema. Returns (is_valid, errors)."""
+        return try_validate_with_jsonschema(self.schema, data)
+
+
 __all__ = [
     "BaseModel",
     "ValidationError",
@@ -56,6 +68,7 @@ __all__ = [
     "json_schema",
     "load_json_schema_from_file",
     "try_validate_with_jsonschema",
+    "SchemaValidator",
 ]
 
 

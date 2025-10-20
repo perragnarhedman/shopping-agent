@@ -7,6 +7,7 @@ from temporalio import activity
 
 from src.agents.authentication import AuthenticationAgent
 from src.agents.shopping import ShoppingAgent
+from src.agents.conversation import ConversationAgent
 from src.agents.tools import ToolEnv
 from src.core.web_automation import launch_browser, new_context, new_page, safe_goto
 
@@ -51,6 +52,27 @@ async def run_shopping_activity(payload: Dict[str, Any]) -> Dict[str, Any]:
                 # Also tag events with workflow_id to correlate in UI if needed.
                 result = await agent.run(goal=goal, env=env, debug=debug)
                 return result
+
+
+@activity.defn
+async def run_conversation_activity(payload: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Conversation agent activity - NO ToolEnv needed (pure LLM reasoning)
+    """
+    user_message = payload["user_message"]
+    conversation_history = payload.get("conversation_history", [])
+    session_context = payload.get("session_context", {})
+    clarification_count = payload.get("clarification_count", 0)
+    
+    agent = ConversationAgent()
+    result = await agent.run(
+        user_message=user_message,
+        conversation_history=conversation_history,
+        session_context=session_context,
+        clarification_count=clarification_count
+    )
+    
+    return result
 
 
 def _base_url_for_store(store: str) -> str:

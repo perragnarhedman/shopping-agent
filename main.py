@@ -20,6 +20,7 @@ from src.core.temporal_client import get_temporal_client
 from src.core.events import subscribe_events
 from src.workflows.auth_workflow import AuthenticationWorkflow
 from src.workflows.shopping_workflow import ShoppingWorkflow
+from src.workflows.conversation_workflow import ConversationWorkflow
 
 
 load_dotenv()
@@ -211,7 +212,7 @@ async def ui_desktop() -> HTMLResponse:
             <header>
               <strong>Desktop Viewer</strong> – mirrors the worker's Chromium via noVNC
             </header>
-            <iframe src="http://localhost:6080/vnc_auto.html?autoconnect=true"></iframe>
+            <iframe src="viceshttp://localhost:6080/vnc_auto.html?autoconnect=true"></iframe>
           </body>
         </html>
         """
@@ -323,6 +324,7 @@ async def ui_start() -> HTMLResponse:
               const cancelBtn = document.getElementById('cancelBtn');
 
               let runId = null;
+              let conversationWorkflowId = null;
 
               function scrollToBottom(){ chat.scrollTop = chat.scrollHeight; }
 
@@ -488,9 +490,72 @@ async def ui_start() -> HTMLResponse:
                 } catch (e) { addMsg('Signal failed: ' + (e && e.message ? e.message : e), 'assistant'); }
               }
 
+              async function sendConversationMessage(userMessage){
+                addMsg(userMessage, 'user');
+                statusEl.textContent = 'Thinking...';
+                
+                try {
+                  const payload = {
+                    message: userMessage,
+                    workflow_id: conversationWorkflowId
+                  };
+                  
+                  const res = await fetch('/v2/conversation', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
+                  });
+                  
+                  const json = await res.json();
+                  
+                  if (json.error) {
+                    addMsg('Error: ' + json.error, 'assistant');
+                    statusEl.textContent = 'Error';
+                    return;
+                  }
+                  
+                  // Store workflow ID for session continuity
+                  if (json.workflow_id) {
+                    conversationWorkflowId = json.workflow_id;
+                    // Don't overwrite runId if a specialized agent is running
+                    if (!runId) {
+                      runId = json.workflow_id;
+                      runBadge.textContent = json.workflow_id;
+                    }
+                  }
+                  
+                  // Display assistant response
+                  addMsg(json.message, 'assistant');
+                  
+                  // Update status based on next action
+                  if (json.next_action === 'await_user_input') {
+                    statusEl.textContent = 'Waiting for your input';
+                  } else if (json.next_action === 'delegate_to_agent') {
+                    statusEl.textContent = 'Processing...';
+                  } else if (json.next_action === 'end_session') {
+                    statusEl.textContent = 'Completed';
+                    conversationWorkflowId = null;
+                  } else if (json.next_action === 'human_escalation_needed') {
+                    statusEl.textContent = 'Needs Help';
+                  }
+                  
+                  // Show cart items if available
+                  if (json.session_context && json.session_context.cart_items && json.session_context.cart_items.length > 0) {
+                    const cartInfo = `Cart: ${json.session_context.cart_items.join(', ')}`;
+                    addMsg(cartInfo, 'assistant');
+                  }
+                  
+                } catch (e) {
+                  addMsg('Error: ' + (e.message || e), 'assistant');
+                  statusEl.textContent = 'Error';
+                }
+              }
+
               sendBtn.onclick = () => {
                 const text = (input.value || '').trim();
                 if (!text) return;
+                
+                // Support legacy commands for testing
                 if (text.startsWith('/shop')) {
                   const q = text.replace('/shop', '').trim();
                   startShopping(q || 'mjölk');
@@ -503,7 +568,8 @@ async def ui_start() -> HTMLResponse:
                 } else if (text === '/cancel') {
                   signal('cancel');
                 } else {
-                  addMsg('You: ' + text, 'user');
+                  // Natural language input - use conversation agent
+                  sendConversationMessage(text);
                 }
                 input.value = '';
               };
@@ -511,7 +577,8 @@ async def ui_start() -> HTMLResponse:
               input.addEventListener('keydown', (e)=>{ if (e.key === 'Enter'){ e.preventDefault(); sendBtn.click(); }});
 
               // init
-              addMsg('Hi! Type /shop mjölk to start shopping or /auth to test authentication. Use /pause, /resume, /cancel to control runs.', 'assistant');
+              addMsg('Hi! What would you like to buy today? (e.g., "I need milk and bread")', 'assistant');
+              addMsg('Tip: You can also use commands like /shop, /auth, /pause, /resume, /cancel', 'assistant');
               connectEvents();
             </script>
           </body>
@@ -585,6 +652,47 @@ async def v2_run_shopping(req: V2RunRequest) -> JSONResponse:
             task_queue=req.task_queue,
         )
         return JSONResponse({"workflow_id": handle.id})
+    except Exception as exc:
+        return JSONResponse({"error": str(exc)}, status_code=500)
+
+
+class ConversationRequest(BaseModel):
+    message: str
+    workflow_id: str | None = None
+    task_queue: str = "shopping-agent-task-queue"
+
+
+@app.post("/v2/conversation")
+async def v2_conversation(req: ConversationRequest) -> JSONResponse:
+    """
+    Conversational endpoint - natural language shopping assistant
+    """
+    try:
+        client = await get_temporal_client()
+        workflow_id = req.workflow_id or f"conv-{uuid.uuid4()}"
+        
+        payload = {
+            "user_message": req.message,
+            "workflow_id": workflow_id
+        }
+        
+        # Start new workflow for each message
+        # (Future: Use signals for multi-turn in same workflow instance)
+        handle = await client.start_workflow(
+            ConversationWorkflow.run,
+            payload,
+            id=workflow_id,
+            task_queue=req.task_queue
+        )
+        
+        result = await handle.result()
+        
+        return JSONResponse({
+            "message": result["message"],
+            "workflow_id": handle.id,
+            "session_context": result["session_context"],
+            "next_action": result["next_action"]
+        })
     except Exception as exc:
         return JSONResponse({"error": str(exc)}, status_code=500)
 
